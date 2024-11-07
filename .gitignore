@@ -148,3 +148,5 @@ discord.log
 
 # Token API
 .env.token
+# config file
+config.json
