@@ -202,13 +202,28 @@ class CTF(commands.Cog, name="CTF"):
 
         logger.debug(f"{channel=}")
 
+        description = f"""
+**Description:**
+
+{data["description"]}
+
+- **Start Time:** <t:{int(start_time.timestamp())}:f>
+- **End Time:** <t:{int(end_time.timestamp())}:f>
+- **URL:** {data["url"]}
+- **Format:** {data["format"]}
+- **Location:** {data["location"]}
+- **Weight:** {data["weight"]}
+- **Prizes:**\n{data["prizes"]}
+
+"""
+
         embed = discord.Embed(
             title=data["title"],
-            description=data["description"],
+            description=description,
             url=data["url"],
             timestamp=datetime.now(),
             color=0xBEBEFE,
-        )
+        ).set_thumbnail(url=data["logo"])
         await channel.send(embed=embed)
 
         # logger.debug(f"Logo: {data['logo']}")
@@ -223,7 +238,9 @@ class CTF(commands.Cog, name="CTF"):
             logo=data["logo"] if data["logo"] != "" in data else None,
         )
 
-        role = await context.guild.create_role(name=data["title"])
+        role = await context.guild.create_role(
+            name=data["title"], color=discord.Color.random()
+        )
 
         ctf = CTFModel(
             name=data["title"],
@@ -232,6 +249,8 @@ class CTF(commands.Cog, name="CTF"):
             event_id=events.id,
             role_id=role.id,
         )
+
+        logger.debug(f"{ctf=}")
 
         await self.bot.database.add_ctf(ctf)
 
