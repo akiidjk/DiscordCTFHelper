@@ -9,7 +9,7 @@ import aiosqlite
 import discord
 from discord.ext import commands, tasks
 from discord.ext.commands import Context
-from discord import app_commands
+from discord import ScheduledEvent, app_commands
 from dotenv import load_dotenv
 
 from lib.logger import logger
@@ -236,14 +236,28 @@ class DiscordBot(commands.Bot):
         else:
             raise error
 
-    async def on_scheduled_event_update(self, before, after):
+    async def on_scheduled_event_update(
+        self, before: ScheduledEvent, after: ScheduledEvent
+    ) -> None:
         if (
             before.status != after.status
             and after.status == discord.EventStatus.completed
         ):
-            channel = after.guild.system_channel
-            if channel:
-                await channel.send(f"L'evento '{after.name}' è appena terminato!")
+            ctf = await self.database.get_ctf(after.name)
+
+            channel = self.get_channel(ctf.text_channel_id)
+            role = after.guild.get_role(ctf.role_id)
+
+            await channel.edit(
+                category=after.guild.get_channel(
+                    self.config["ctf"]["category_archived_id"]
+                )
+            )
+            role.edit(color=discord.Color.light_gray())
+
+            await channel.send(
+                f"The CTF **{ctf.name}** has ended! The channel has been moved to the archived category."
+            )
 
 
 load_dotenv()
