@@ -12,6 +12,7 @@ import requests
 
 from api.ctftime import get_ctf_info
 from lib.logger import logger
+from lib.ctf_model import CTFModel
 
 
 def check_url(url: str) -> bool:
@@ -39,7 +40,6 @@ class CTF(commands.Cog, name="CTF"):
         end_time: datetime,
         logo: str = None,
         url: str = None,
-        channel: TextChannel = None,
     ) -> None:
         """
         Create the events for the CTF.
@@ -55,8 +55,7 @@ class CTF(commands.Cog, name="CTF"):
         try:
             scheduled_event = await guild.create_scheduled_event(
                 name=event_name,
-                description=event_description
-                + f"\n\nThe event will be take in the channel: {channel.name} | {channel.id}.",
+                description=event_description,
                 start_time=start_time,
                 end_time=end_time,
                 entity_type=discord.EntityType.external,
@@ -83,6 +82,7 @@ class CTF(commands.Cog, name="CTF"):
     ) -> TextChannel:
         guild = context.guild
         category = context.guild.get_channel(category_id)
+        logger.debug(f"{category=}")
         try:
             channel = await guild.create_text_channel(
                 name=channel_name,
@@ -134,8 +134,8 @@ class CTF(commands.Cog, name="CTF"):
 
         id_active = category_active.id
         id_archived = category_archived.id
-        self.category_active_id = category_active
-        self.category_archived_id = category_archived
+        self.category_active_id = id_active
+        self.category_archived_id = id_archived
 
         with open("config.json", "r") as config:
             json_data = json.load(config)
@@ -150,16 +150,18 @@ class CTF(commands.Cog, name="CTF"):
             ephemeral=True,
         )
 
+    # * -----------------------------------------------------------------------
+
     @commands.hybrid_command(
-        name="get_info",
-        description="Get the info for a events from ctftime.org",
+        name="create_ctf",
+        description="Create a CTF event in the discord server.",
     )
     @app_commands.describe(
         url="The URL of the event",
     )
-    async def get_info(self, context: Context, url: str) -> None:
+    async def create_ctf(self, context: Context, url: str) -> None:
         """
-        Get the information of a CTF from ctftime.org.
+        Create a CTF event in the discord server.
 
         :param context: The application command context.
         :param url: The URL of the CTF.
@@ -179,6 +181,8 @@ class CTF(commands.Cog, name="CTF"):
         start_time = datetime.fromisoformat(data["start"])
         end_time = datetime.fromisoformat(data["finish"])
 
+        logger.debug(f"{self.category_active_id=}")
+
         if not self.category_active_id:
             res = self.set_cat()
             if not res:
@@ -188,11 +192,15 @@ class CTF(commands.Cog, name="CTF"):
                 )
                 return
 
+        logger.debug(f"{self.category_active_id=}")
+
         channel = await self.create_channel(
             context=context,
             channel_name=data["title"] + " - " + f"{str(start_time.year)}",
             category_id=self.category_active_id,
         )
+
+        logger.debug(f"{channel=}")
 
         embed = discord.Embed(
             title=data["title"],
@@ -203,18 +211,29 @@ class CTF(commands.Cog, name="CTF"):
         )
         await channel.send(embed=embed)
 
-        logger.debug(f"Logo: {data['logo']}")
+        # logger.debug(f"Logo: {data['logo']}")
 
-        await self.create_events(
+        events = await self.create_events(
             context=context,
             event_name=data["title"],
             event_description=data["description"],
             start_time=start_time,
             end_time=end_time,
             url=data["url"],
-            channel=channel,
             logo=data["logo"] if data["logo"] != "" in data else None,
         )
+
+        role = await context.guild.create_role(name=data["title"])
+
+        ctf = CTFModel(
+            name=data["title"],
+            description=data["description"],
+            text_channel_id=channel.id,
+            event_id=events.id,
+            role_id=role.id,
+        )
+
+        await self.bot.database.add_ctf(ctf)
 
         await context.send("Ctf created in the discord server ✅", ephemeral=True)
 
