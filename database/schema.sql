@@ -4,5 +4,6 @@ CREATE TABLE IF NOT EXISTS 'ctf' (
   'description' TEXT NOT NULL,
   'text_channel_id' INTEGER NOT NULL,
   'event_id' INTEGER NOT NULL,
-  'role_id' INTEGER NOT NULL
+  'role_id' INTEGER NOT NULL,
+  'msg_id' INTEGER NOT NULL
 );
