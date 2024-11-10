@@ -9,7 +9,7 @@ import aiosqlite
 import discord
 from discord.ext import commands, tasks
 from discord.ext.commands import Context
-from discord import ScheduledEvent, app_commands
+from discord import EventStatus, ScheduledEvent
 from dotenv import load_dotenv
 
 from lib.logger import logger
@@ -228,7 +228,6 @@ class DiscordBot(commands.Bot):
         elif isinstance(error, commands.MissingRequiredArgument):
             embed = discord.Embed(
                 title="Error!",
-                # We need to capitalize because the command arguments have no capital letter in the code and they are the first word in the error message.
                 description=str(error).capitalize(),
                 color=0xE02B2B,
             )
@@ -239,11 +238,8 @@ class DiscordBot(commands.Bot):
     async def on_scheduled_event_update(
         self, before: ScheduledEvent, after: ScheduledEvent
     ) -> None:
-        if (
-            before.status != after.status
-            and after.status == discord.EventStatus.completed
-        ):
-            ctf = await self.database.get_ctf(after.name)
+        if before.status != after.status and after.status == EventStatus.completed:
+            ctf = await self.database.get_ctf_by_name(after.name)
 
             channel = self.get_channel(ctf.text_channel_id)
             role = after.guild.get_role(ctf.role_id)
@@ -253,11 +249,27 @@ class DiscordBot(commands.Bot):
                     self.config["ctf"]["category_archived_id"]
                 )
             )
-            role.edit(color=discord.Color.light_gray())
+
+            await role.edit(
+                color=discord.Color.light_gray(), hoist=False, mentionable=False
+            )
 
             await channel.send(
                 f"The CTF **{ctf.name}** has ended! The channel has been moved to the archived category."
             )
+
+    async def on_reaction_add(
+        self, reaction: discord.Reaction, user: discord.Member
+    ) -> None:
+        if user.bot:
+            return
+
+        logger.debug(f"{reaction=}, {user=}")
+
+        message = reaction.message
+        ctf = await self.database.get_ctf_by_message_id(message.id)
+        role = message.guild.get_role(ctf.role_id)
+        await user.add_roles(role)
 
 
 load_dotenv()
