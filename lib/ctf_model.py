@@ -10,3 +10,4 @@ class CTFModel:
     text_channel_id: int
     event_id: int
     role_id: int
+    msg_id: int
