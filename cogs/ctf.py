@@ -1,28 +1,14 @@
 import json
-import re
 from datetime import datetime
 
-import discord
 from discord.ext import commands
-from discord import app_commands
+from discord import Color, Embed, EntityType, Message, PrivacyLevel, Role, app_commands
 from discord import CategoryChannel, TextChannel
 from discord.ext.commands import Context
 
-import requests
-
-from api.ctftime import get_ctf_info
 from lib.logger import logger
 from lib.ctf_model import CTFModel
-
-
-def check_url(url: str) -> bool:
-    """
-    Check if the URL is valid.
-
-    :param url: The URL to check.
-    :return: True if the URL is valid, False otherwise.
-    """
-    return bool(re.match(r"^https://ctftime.org/event/\d+/$", url))
+from lib.utils import check_url, get_logo, get_ctf_info
 
 
 class CTF(commands.Cog, name="CTF"):
@@ -38,8 +24,8 @@ class CTF(commands.Cog, name="CTF"):
         event_description: str,
         start_time: datetime,
         end_time: datetime,
-        logo: str = None,
-        url: str = None,
+        logo: str,
+        url: str,
     ) -> None:
         """
         Create the events for the CTF.
@@ -52,27 +38,54 @@ class CTF(commands.Cog, name="CTF"):
         :param end_time: The end time of the event.
         """
         guild = context.guild
+        logger.debug(f"{logo=}")
+        logger.debug(f"{type(logo)=}")
+
+        image_logo = await get_logo(logo)
+
         try:
             scheduled_event = await guild.create_scheduled_event(
                 name=event_name,
                 description=event_description,
                 start_time=start_time,
                 end_time=end_time,
-                entity_type=discord.EntityType.external,
+                entity_type=EntityType.external,
                 location=url,
-                privacy_level=discord.PrivacyLevel.guild_only,
-                image=requests.get(logo).content
-                if logo
-                else open("images/default.png", "rb").read(),
+                privacy_level=PrivacyLevel.guild_only,
+                image=image_logo,
             )
         except Exception as e:
             logger.error(f"Error: {e}")
+
+            if str(e) == "Unsupported image type given":
+                return await self.create_events(
+                    context=context,
+                    event_name=event_name,
+                    event_description=event_description,
+                    start_time=start_time,
+                    end_time=end_time,
+                    url=url,
+                    logo=None,
+                )
+
             await context.send(
                 f"Failed to create the event. ❌\n Error: {e}",
                 ephemeral=True,
             )
+
             return
         return scheduled_event
+
+    def set_cat(self) -> bool:
+        try:
+            with open("config.json", "r") as config:
+                json_data = json.load(config)
+                self.category_active_id = json_data["ctf"]["category_active_id"]
+                self.category_archived_id = json_data["ctf"]["category_archived_id"]
+            return True
+        except Exception as e:
+            logger.error(f"Error: {e}")
+            return False
 
     async def create_channel(
         self,
@@ -99,16 +112,77 @@ class CTF(commands.Cog, name="CTF"):
             return
         return channel
 
-    def set_cat(self) -> bool:
-        try:
-            with open("config.json", "r") as config:
-                json_data = json.load(config)
-                self.category_active_id = json_data["ctf"]["category_active_id"]
-                self.category_archived_id = json_data["ctf"]["category_archived_id"]
-            return True
-        except Exception as e:
-            logger.error(f"Error: {e}")
-            return False
+    async def create_embed(
+        data: dict, start_time: datetime, end_time: datetime, channel: TextChannel
+    ) -> Message:
+        description = f"""
+**Description:**
+
+{data["description"]}
+
+- **Start Time:** <t:{int(start_time.timestamp())}:f>
+- **End Time:** <t:{int(end_time.timestamp())}:f>
+- **URL:** {data["url"]}
+- **Format:** {data["format"]}
+- **Location:** {data["location"]}
+- **Weight:** {data["weight"]}
+- **Prizes:**\n{data["prizes"]}
+
+"""
+
+        embed = (
+            Embed(
+                title=data["title"],
+                description=description,
+                url=data["url"],
+                timestamp=datetime.now(),
+                color=0xBEBEFE,
+            )
+            .set_thumbnail(url=data["logo"])
+            .set_footer(
+                text="Add a reaction to get the ctf role (only if you want to participate). 🙃",
+                icon_url=None,
+            )
+        )
+
+        msg = await channel.send(embed=embed)
+
+        await msg.add_reaction("✅")
+
+        return msg
+
+    async def create_role(self, context: Context, name: str) -> Role:
+        guild = context.guild
+        role = await context.guild.create_role(
+            name=name,
+            color=Color.random(),
+            mentionable=True,
+            hoist=True,
+        )
+
+        bot_top_role = guild.me.top_role
+
+        manageable_roles = [
+            role for role in guild.roles if role.position < bot_top_role.position
+        ]
+
+        logger.debug(
+            [str(role.position) + " " + str(role.name) for role in manageable_roles]
+        )
+
+        lowest_manageable_role = max(manageable_roles, key=lambda r: r.position)
+
+        new_position = max(
+            lowest_manageable_role.position + 1, bot_top_role.position - 1
+        )
+
+        logger.debug(f"{new_position=}")
+
+        await guild.edit_role_positions({role: new_position})
+
+        return role
+
+    # * -----------------------------------------------------------------------
 
     @commands.hybrid_command(
         name="set_category",
@@ -166,12 +240,12 @@ class CTF(commands.Cog, name="CTF"):
         :param context: The application command context.
         :param url: The URL of the CTF.
         """
-
+        await context.defer(ephemeral=True)
         result = check_url(url)
 
         if not result:
             await context.send(
-                "The URL is not valid. ❌ (The url must be in the format https://ctftime.org/event/<id>/)",
+                "The URL is not valid. ❌ (The url must be in the format https://ctftime.org/event/<id>)",
                 ephemeral=True,
             )
             return
@@ -180,6 +254,15 @@ class CTF(commands.Cog, name="CTF"):
 
         start_time = datetime.fromisoformat(data["start"])
         end_time = datetime.fromisoformat(data["finish"])
+
+        data["title"] = data["title"] + " - " + f"{str(start_time.year)}"
+
+        if await self.bot.database.is_ctf_present(data["title"]):
+            await context.send(
+                "The CTF is already present in the discord server. ❌",
+                ephemeral=True,
+            )
+            return
 
         logger.debug(f"{self.category_active_id=}")
 
@@ -196,51 +279,44 @@ class CTF(commands.Cog, name="CTF"):
 
         channel = await self.create_channel(
             context=context,
-            channel_name=data["title"] + " - " + f"{str(start_time.year)}",
+            channel_name=data["title"],
             category_id=self.category_active_id,
         )
 
         logger.debug(f"{channel=}")
 
-        description = f"""
-**Description:**
+        msg = await self.create_embed(
+            data=data,
+            start_time=start_time,
+            end_time=end_time,
+            channel=channel,
+        )
 
-{data["description"]}
+        description = (
+            str(data["description"])[:997] + "..."
+            if len(data["description"]) >= 997
+            else data["description"]
+        )
 
-- **Start Time:** <t:{int(start_time.timestamp())}:f>
-- **End Time:** <t:{int(end_time.timestamp())}:f>
-- **URL:** {data["url"]}
-- **Format:** {data["format"]}
-- **Location:** {data["location"]}
-- **Weight:** {data["weight"]}
-- **Prizes:**\n{data["prizes"]}
-
-"""
-
-        embed = discord.Embed(
-            title=data["title"],
-            description=description,
-            url=data["url"],
-            timestamp=datetime.now(),
-            color=0xBEBEFE,
-        ).set_thumbnail(url=data["logo"])
-        await channel.send(embed=embed)
-
-        # logger.debug(f"Logo: {data['logo']}")
+        logger.debug(f"{data['logo']=}")
+        logger.debug(f"{data['logo'] != ''=}")
 
         events = await self.create_events(
             context=context,
             event_name=data["title"],
-            event_description=data["description"],
+            event_description=description,
             start_time=start_time,
             end_time=end_time,
             url=data["url"],
-            logo=data["logo"] if data["logo"] != "" in data else None,
+            logo=data["logo"],
         )
 
-        role = await context.guild.create_role(
-            name=data["title"], color=discord.Color.random()
+        role = await self.create_role(
+            context=context,
+            name=data["title"],
         )
+
+        logger.debug(f"{msg.id=}")
 
         ctf = CTFModel(
             name=data["title"],
@@ -248,6 +324,7 @@ class CTF(commands.Cog, name="CTF"):
             text_channel_id=channel.id,
             event_id=events.id,
             role_id=role.id,
+            msg_id=msg.id,
         )
 
         logger.debug(f"{ctf=}")
