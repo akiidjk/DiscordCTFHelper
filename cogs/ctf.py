@@ -112,7 +112,7 @@ class CTF(commands.Cog, name="CTF"):
             return
         return channel
 
-    async def create_embed(
+    async def create_embed(self,
         data: dict, start_time: datetime, end_time: datetime, channel: TextChannel
     ) -> Message:
         description = f"""

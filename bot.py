@@ -264,7 +264,7 @@ class DiscordBot(commands.Bot):
         if user.bot:
             return
 
-        logger.debug(f"{reaction=}, {user=}")
+        self.logger.debug(f"{reaction=}, {user=}")
 
         message = reaction.message
         ctf = await self.database.get_ctf_by_message_id(message.id)
