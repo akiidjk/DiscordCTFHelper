@@ -1,8 +1,6 @@
-import json
 import os
 import platform
 import random
-import sys
 
 import aiosqlite
 
@@ -15,12 +13,6 @@ from dotenv import load_dotenv
 from lib.logger import logger
 
 from database import DatabaseManager
-
-if not os.path.isfile(f"{os.path.realpath(os.path.dirname(__file__))}/config.json"):
-    sys.exit("'config.json' not found! Please add it and try again.")
-else:
-    with open(f"{os.path.realpath(os.path.dirname(__file__))}/config.json") as file:
-        config = json.load(file)
 
 """	
 Setup bot intents (events restrictions)
@@ -71,7 +63,7 @@ If you want to use prefix commands, make sure to also enable the intent below in
 class DiscordBot(commands.Bot):
     def __init__(self) -> None:
         super().__init__(
-            command_prefix=commands.when_mentioned_or(config["prefix"]),
+            command_prefix=commands.when_mentioned_or("!"),
             intents=intents,
             help_command=None,
         )
@@ -84,7 +76,6 @@ class DiscordBot(commands.Bot):
         - self.bot.config # In cogs
         """
         self.logger = logger
-        self.config = config
         self.database = None
 
     async def init_db(self) -> None:
@@ -238,16 +229,33 @@ class DiscordBot(commands.Bot):
     async def on_scheduled_event_update(
         self, before: ScheduledEvent, after: ScheduledEvent
     ) -> None:
+        if before.status != after.status and after.status == EventStatus.active:
+            ctf = await self.database.get_ctf_by_name(after.name, after.guild.id)
+
+            if ctf is None:
+                logger.info(f"CTF {after.name} not found in database")
+                return
+
+            channel = self.get_channel(ctf.text_channel_id)
+
+            await channel.send(
+                f"<@&{ctf.role_id}> The CTF has started! Good luck to all participants! :tada:"
+            )
+
         if before.status != after.status and after.status == EventStatus.completed:
-            ctf = await self.database.get_ctf_by_name(after.name)
+            ctf = await self.database.get_ctf_by_name(after.name, after.guild.id)
+
+            if ctf is None:
+                logger.info(f"CTF {after.name} not found in database")
+                return
 
             channel = self.get_channel(ctf.text_channel_id)
             role = after.guild.get_role(ctf.role_id)
 
+            server = await self.database.get_server_by_id(after.guild.id)
+
             await channel.edit(
-                category=after.guild.get_channel(
-                    self.config["ctf"]["category_archived_id"]
-                )
+                category=after.guild.get_channel(server.archive_category_id)
             )
 
             await role.edit(
@@ -267,9 +275,28 @@ class DiscordBot(commands.Bot):
         self.logger.debug(f"{reaction=}, {user=}")
 
         message = reaction.message
-        ctf = await self.database.get_ctf_by_message_id(message.id)
+        ctf = await self.database.get_ctf_by_message_id(message.id, message.guild.id)
+        if ctf is None:
+            logger.info(f"CTF not found for message {message.id}")
+            return
         role = message.guild.get_role(ctf.role_id)
         await user.add_roles(role)
+
+    async def on_reaction_remove(
+        self, reaction: discord.Reaction, user: discord.Member
+    ) -> None:
+        if user.bot:
+            return
+
+        self.logger.debug(f"{reaction=}, {user=}")
+
+        message = reaction.message
+        ctf = await self.database.get_ctf_by_message_id(message.id, message.guild.id)
+        if ctf is None:
+            logger.info(f"CTF not found for message {message.id}")
+            return
+        role = message.guild.get_role(ctf.role_id)
+        await user.remove_roles(role)
 
 
 load_dotenv()
