@@ -3,7 +3,7 @@ import re
 import requests
 from PIL import Image
 
-from lib import logger
+from lib.logger import logger
 
 BASE_URL = "https://ctftime.org/api/v1"
 
