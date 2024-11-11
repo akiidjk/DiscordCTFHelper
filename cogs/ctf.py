@@ -1,4 +1,3 @@
-import json
 from datetime import datetime
 
 from discord.ext import commands
@@ -7,7 +6,7 @@ from discord import CategoryChannel, TextChannel
 from discord.ext.commands import Context
 
 from lib.logger import logger
-from lib.ctf_model import CTFModel
+from lib.models import CTFModel, ServerModel
 from lib.utils import check_url, get_logo, get_ctf_info
 
 
@@ -76,12 +75,12 @@ class CTF(commands.Cog, name="CTF"):
             return
         return scheduled_event
 
-    def set_cat(self) -> bool:
+    async def set_cat(self, server_id) -> bool:
         try:
-            with open("config.json", "r") as config:
-                json_data = json.load(config)
-                self.category_active_id = json_data["ctf"]["category_active_id"]
-                self.category_archived_id = json_data["ctf"]["category_archived_id"]
+            server = await self.bot.database.get_server_by_id(server_id)
+            logger.debug(f"{server=}")
+            self.category_active_id = server.active_category_id
+            self.category_archived_id = server.archive_category_id
             return True
         except Exception as e:
             logger.error(f"Error: {e}")
@@ -112,8 +111,8 @@ class CTF(commands.Cog, name="CTF"):
             return
         return channel
 
-    async def create_embed(self,
-        data: dict, start_time: datetime, end_time: datetime, channel: TextChannel
+    async def create_embed(
+        self, data: dict, start_time: datetime, end_time: datetime, channel: TextChannel
     ) -> Message:
         description = f"""
 **Description:**
@@ -189,14 +188,14 @@ class CTF(commands.Cog, name="CTF"):
         description="Set the category for the active and archived CTF.",
     )
     @app_commands.describe(
-        category_archived="The name of the category for the archived ctf",
         category_active="The name of the category for the next or current ctf",
+        category_archived="The name of the category for the archived ctf",
     )
     async def init(
         self,
         context: Context,
-        category_archived: CategoryChannel,
         category_active: CategoryChannel,
+        category_archived: CategoryChannel,
     ) -> None:
         """
         This is command simply set in the file the category for the active CTF and the category for the archived CTF.
@@ -211,13 +210,13 @@ class CTF(commands.Cog, name="CTF"):
         self.category_active_id = id_active
         self.category_archived_id = id_archived
 
-        with open("config.json", "r") as config:
-            json_data = json.load(config)
-            json_data["ctf"]["category_active_id"] = id_active
-            json_data["ctf"]["category_archived_id"] = id_archived
-
-        with open("config.json", "w") as config:
-            json.dump(json_data, config, indent=4)
+        await self.bot.database.add_server(
+            ServerModel(
+                id=context.guild.id,
+                active_category_id=id_active,
+                archive_category_id=id_archived,
+            )
+        )
 
         await context.send(
             content=f"Successfully! set the category for the active CTF to {category_active.name} and the category for the archived CTF to {category_archived.name}. ✅",
@@ -250,14 +249,21 @@ class CTF(commands.Cog, name="CTF"):
             )
             return
 
-        data = get_ctf_info(url)
+        data = await get_ctf_info(url)
+
+        if not data:
+            await context.send(
+                "Failed to get the information of the CTF. ❌",
+                ephemeral=True,
+            )
+            return
 
         start_time = datetime.fromisoformat(data["start"])
         end_time = datetime.fromisoformat(data["finish"])
 
         data["title"] = data["title"] + " - " + f"{str(start_time.year)}"
 
-        if await self.bot.database.is_ctf_present(data["title"]):
+        if await self.bot.database.is_ctf_present(data["title"], context.guild.id):
             await context.send(
                 "The CTF is already present in the discord server. ❌",
                 ephemeral=True,
@@ -267,7 +273,8 @@ class CTF(commands.Cog, name="CTF"):
         logger.debug(f"{self.category_active_id=}")
 
         if not self.category_active_id:
-            res = self.set_cat()
+            logger.debug("Setting the category")
+            res = await self.set_cat(server_id=context.guild.id)
             if not res:
                 await context.send(
                     "Failed to set the category. ❌ Please check the configuration or contact support.",
@@ -319,6 +326,7 @@ class CTF(commands.Cog, name="CTF"):
         logger.debug(f"{msg.id=}")
 
         ctf = CTFModel(
+            server_id=context.guild.id,
             name=data["title"],
             description=data["description"],
             text_channel_id=channel.id,
