@@ -1,5 +1,6 @@
 import io
 import re
+import aiohttp
 import requests
 from PIL import Image
 
@@ -18,23 +19,30 @@ async def get_logo(url: str) -> bytes:
     Returns:
         bytes: The logo of the CTF.
     """
-    if url is not None and url != "":
+    if url:
         try:
-            response = requests.get(url, headers={"User-Agent": "CookieBot"})
-            response.raise_for_status()
-
-            with Image.open(io.BytesIO(response.content)) as pillow_img:
-                if pillow_img.format != "PNG":
-                    image_buffer = io.BytesIO()
-                    pillow_img.save(image_buffer, format="PNG")
-                    return image_buffer.getvalue()
-                else:
-                    return response.content
+            async with aiohttp.ClientSession() as session:
+                async with session.get(
+                    url, headers={"User-Agent": "CookieBot"}
+                ) as response:
+                    if response.status == 200:
+                        content = await response.read()
+                        with Image.open(io.BytesIO(content)) as pillow_img:
+                            if pillow_img.format != "PNG":
+                                image_buffer = io.BytesIO()
+                                pillow_img.save(image_buffer, format="PNG")
+                                return image_buffer.getvalue()
+                            else:
+                                return content
+                    else:
+                        logger.error(
+                            f"Failed to retrieve image. Status code: {response.status}"
+                        )
         except Exception as e:
-            logger.error(f"Error: {e}")
-            return open("images/default.png", "rb").read()
-    else:
-        return open("images/default.png", "rb").read()
+            logger.error(f"Error fetching logo: {e}")
+
+    with open("images/default.png", "rb") as default_img:
+        return default_img.read()
 
 
 def check_url(url: str) -> bool:
@@ -47,21 +55,34 @@ def check_url(url: str) -> bool:
     return bool(re.match(r"^https://ctftime.org/event/\d+$", url))
 
 
-def get_ctf_info(url: str) -> dict:
+async def get_ctf_info(url: str) -> dict | None:
     """
     Get the information of a CTF from ctftime.org.
 
-    :param url: The URL of the CTF.
-    :return: The information of the CTF.
+    Args:
+        url (str): The URL of the CTF.
+
+    Returns:
+        dict: The information of the CTF.
     """
     if url.endswith("/"):
         url = url[:-1]
     id_event = url.split("/")[-1]
     logger.debug(f"Getting information for event with ID {id_event}")
     logger.debug(f"GET {BASE_URL}/events/{id_event}/")
-    response = requests.get(
-        f"{BASE_URL}/events/{id_event}/", headers={"User-Agent": "CookieBot"}
-    )
-    logger.debug(f"Response status code: {response.status_code}")
-    logger.debug(f"Response data: {response.text}")
-    return response.json()
+
+    async with aiohttp.ClientSession() as session:
+        async with session.get(
+            f"{BASE_URL}/events/{id_event}/", headers={"User-Agent": "CookieBot"}
+        ) as response:
+            logger.debug(f"Response status code: {response.status}")
+            response_text = await response.text()
+            logger.debug(f"Response data: {response_text}")
+
+            if response.status == 200:
+                return await response.json()
+            else:
+                logger.error(
+                    f"Failed to retrieve CTF information. Status code: {response.status}"
+                )
+                return None
