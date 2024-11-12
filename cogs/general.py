@@ -32,19 +32,13 @@ class FeedbackForm(discord.ui.Modal, title="Feeedback"):
 class General(commands.Cog, name="general"):
     def __init__(self, bot) -> None:
         self.bot = bot
-        self.context_menu_user = app_commands.ContextMenu(
-            name="Grab ID", callback=self.grab_id
-        )
+        self.context_menu_user = app_commands.ContextMenu(name="Grab ID", callback=self.grab_id)
         self.bot.tree.add_command(self.context_menu_user)
-        self.context_menu_message = app_commands.ContextMenu(
-            name="Remove spoilers", callback=self.remove_spoilers
-        )
+        self.context_menu_message = app_commands.ContextMenu(name="Remove spoilers", callback=self.remove_spoilers)
         self.bot.tree.add_command(self.context_menu_message)
 
     # Message context menu command
-    async def remove_spoilers(
-        self, interaction: discord.Interaction, message: discord.Message
-    ) -> None:
+    async def remove_spoilers(self, interaction: discord.Interaction, message: discord.Message) -> None:
         """
         Removes the spoilers from the message. This command requires the MESSAGE_CONTENT intent to work properly.
 
@@ -66,9 +60,7 @@ class General(commands.Cog, name="general"):
         await interaction.response.send_message(embed=embed, ephemeral=True)
 
     # User context menu command
-    async def grab_id(
-        self, interaction: discord.Interaction, user: discord.User
-    ) -> None:
+    async def grab_id(self, interaction: discord.Interaction, user: discord.User) -> None:
         """
         Grabs the ID of the user.
 
@@ -81,18 +73,12 @@ class General(commands.Cog, name="general"):
         )
         await interaction.response.send_message(embed=embed, ephemeral=True)
 
-    @commands.hybrid_command(
-        name="help", description="List all commands the bot has loaded."
-    )
+    @commands.hybrid_command(name="help", description="List all commands the bot has loaded.")
     async def help(self, context: Context) -> None:
         prefix = self.bot.config["prefix"]
-        embed = discord.Embed(
-            title="Help", description="List of available commands:", color=0xBEBEFE
-        )
+        embed = discord.Embed(title="Help", description="List of available commands:", color=0xBEBEFE)
         for cog_name, cog in self.bot.cogs.items():
-            if cog_name.lower() == "owner" and not (
-                await self.bot.is_owner(context.author)
-            ):
+            if cog_name.lower() == "owner" and not (await self.bot.is_owner(context.author)):
                 continue
 
             commands_list = []
@@ -131,9 +117,7 @@ class General(commands.Cog, name="general"):
         )
         embed.set_author(name="Bot Information")
         embed.add_field(name="Owner:", value="Krypton#7331", inline=True)
-        embed.add_field(
-            name="Python Version:", value=f"{platform.python_version()}", inline=True
-        )
+        embed.add_field(name="Python Version:", value=f"{platform.python_version()}", inline=True)
         embed.add_field(
             name="Prefix:",
             value=f"/ (Slash Commands) or {self.bot.config['prefix']} for normal commands",
@@ -154,21 +138,18 @@ class General(commands.Cog, name="general"):
         """
         roles = [role.name for role in context.guild.roles]
         num_roles = len(roles)
-        if num_roles > 50:
-            roles = roles[:50]
+        max_roles = 50
+        if num_roles > max_roles:
+            roles = roles[:max_roles]
             roles.append(f">>>> Displaying [50/{num_roles}] Roles")
         roles = ", ".join(roles)
 
-        embed = discord.Embed(
-            title="**Server Name:**", description=f"{context.guild}", color=0xBEBEFE
-        )
+        embed = discord.Embed(title="**Server Name:**", description=f"{context.guild}", color=0xBEBEFE)
         if context.guild.icon is not None:
             embed.set_thumbnail(url=context.guild.icon.url)
         embed.add_field(name="Server ID", value=context.guild.id)
         embed.add_field(name="Member Count", value=context.guild.member_count)
-        embed.add_field(
-            name="Text/Voice Channels", value=f"{len(context.guild.channels)}"
-        )
+        embed.add_field(name="Text/Voice Channels", value=f"{len(context.guild.channels)}")
         embed.add_field(name=f"Roles ({len(context.guild.roles)})", value=roles)
         embed.set_footer(text=f"Created at: {context.guild.created_at}")
         await context.send(embed=embed)
@@ -210,9 +191,7 @@ class General(commands.Cog, name="general"):
         except discord.Forbidden:
             await context.send(embed=embed)
 
-    @app_commands.command(
-        name="feedback", description="Submit a feedback for the owners of the bot"
-    )
+    @app_commands.command(name="feedback", description="Submit a feedback for the owners of the bot")
     async def feedback(self, interaction: discord.Interaction) -> None:
         """
         Submit a feedback for the owners of the bot.
