@@ -1,13 +1,15 @@
 from datetime import datetime
 
+from discord import CategoryChannel, Color, Embed, EntityType, Message, PrivacyLevel, Role, TextChannel, app_commands
+from discord.errors import HTTPException
 from discord.ext import commands
-from discord import Color, Embed, EntityType, Message, PrivacyLevel, Role, app_commands
-from discord import CategoryChannel, TextChannel
 from discord.ext.commands import Context
 
 from lib.logger import logger
 from lib.models import CTFModel, ServerModel
-from lib.utils import check_url, get_logo, get_ctf_info
+from lib.utils import check_url, get_ctf_info, get_logo
+
+MAX_DESC_LENGTH = 997
 
 
 class CTF(commands.Cog, name="CTF"):
@@ -19,12 +21,10 @@ class CTF(commands.Cog, name="CTF"):
     async def create_events(
         self,
         context: Context,
-        event_name: str,
+        info: dict,
         event_description: str,
         start_time: datetime,
         end_time: datetime,
-        logo: str,
-        url: str,
     ) -> None:
         """
         Create the events for the CTF.
@@ -37,33 +37,29 @@ class CTF(commands.Cog, name="CTF"):
         :param end_time: The end time of the event.
         """
         guild = context.guild
-        logger.debug(f"{logo=}")
-        logger.debug(f"{type(logo)=}")
-
-        image_logo = await get_logo(logo)
+        image_logo = await get_logo(info["logo"])
 
         try:
             scheduled_event = await guild.create_scheduled_event(
-                name=event_name,
+                name=info["title"],
                 description=event_description,
                 start_time=start_time,
                 end_time=end_time,
                 entity_type=EntityType.external,
-                location=url,
+                location=info["url"],
                 privacy_level=PrivacyLevel.guild_only,
                 image=image_logo,
             )
-        except Exception as e:
+        except HTTPException as e:
             logger.error(f"Error: {e}")
 
             if str(e) == "Unsupported image type given":
                 return await self.create_events(
                     context=context,
-                    event_name=event_name,
+                    info=info,
                     event_description=event_description,
                     start_time=start_time,
                     end_time=end_time,
-                    url=url,
                     logo=None,
                 )
 
@@ -72,7 +68,7 @@ class CTF(commands.Cog, name="CTF"):
                 ephemeral=True,
             )
 
-            return
+            return None
         return scheduled_event
 
     async def set_cat(self, server_id) -> bool:
@@ -81,10 +77,11 @@ class CTF(commands.Cog, name="CTF"):
             logger.debug(f"{server=}")
             self.category_active_id = server.active_category_id
             self.category_archived_id = server.archive_category_id
-            return True
-        except Exception as e:
+        except HTTPException as e:
             logger.error(f"Error: {e}")
             return False
+        else:
+            return True
 
     async def create_channel(
         self,
@@ -102,18 +99,16 @@ class CTF(commands.Cog, name="CTF"):
             )
             overwrites = category.overwrites
             await channel.edit(overwrites=overwrites)
-        except Exception as e:
+        except HTTPException as e:
             logger.error(f"Error: {e}")
             await context.send(
                 f"Failed to create the channel or assign the permission. ❌\n Error: {e}",
                 ephemeral=True,
             )
-            return
+            return None
         return channel
 
-    async def create_embed(
-        self, data: dict, start_time: datetime, end_time: datetime, channel: TextChannel
-    ) -> Message:
+    async def create_embed(self, data: dict, start_time: datetime, end_time: datetime, channel: TextChannel) -> Message:
         description = f"""
 **Description:**
 
@@ -134,7 +129,7 @@ class CTF(commands.Cog, name="CTF"):
                 title=data["title"],
                 description=description,
                 url=data["url"],
-                timestamp=datetime.now(),
+                timestamp=datetime.now(tz=datetime.timezone.utc),
                 color=0xBEBEFE,
             )
             .set_thumbnail(url=data["logo"])
@@ -161,19 +156,13 @@ class CTF(commands.Cog, name="CTF"):
 
         bot_top_role = guild.me.top_role
 
-        manageable_roles = [
-            role for role in guild.roles if role.position < bot_top_role.position
-        ]
+        manageable_roles = [role for role in guild.roles if role.position < bot_top_role.position]
 
-        logger.debug(
-            [str(role.position) + " " + str(role.name) for role in manageable_roles]
-        )
+        logger.debug([str(role.position) + " " + str(role.name) for role in manageable_roles])
 
         lowest_manageable_role = max(manageable_roles, key=lambda r: r.position)
 
-        new_position = max(
-            lowest_manageable_role.position + 1, bot_top_role.position - 1
-        )
+        new_position = max(lowest_manageable_role.position + 1, bot_top_role.position - 1)
 
         logger.debug(f"{new_position=}")
 
@@ -198,13 +187,12 @@ class CTF(commands.Cog, name="CTF"):
         category_archived: CategoryChannel,
     ) -> None:
         """
-        This is command simply set in the file the category for the active CTF and the category for the archived CTF.
+        Set the category for the active CTF and the category for the archived CTF in the file.
 
         :param context: The application command context.
         :param category_archived: The category for the archived CTF.
         :param category_active: The category for the active CTF.
         """
-
         id_active = category_active.id
         id_archived = category_archived.id
         self.category_active_id = id_active
@@ -219,7 +207,7 @@ class CTF(commands.Cog, name="CTF"):
         )
 
         await context.send(
-            content=f"Successfully! set the category for the active CTF to {category_active.name} and the category for the archived CTF to {category_archived.name}. ✅",
+            content=f"Successfully! set the category for the active CTF to {category_active.name} and the category for the archived CTF to {category_archived.name}. ✅",  # noqa: E501
             ephemeral=True,
         )
 
@@ -261,7 +249,7 @@ class CTF(commands.Cog, name="CTF"):
         start_time = datetime.fromisoformat(data["start"])
         end_time = datetime.fromisoformat(data["finish"])
 
-        data["title"] = data["title"] + " - " + f"{str(start_time.year)}"
+        data["title"] = data["title"] + " - " + f"{start_time.year!s}"
 
         if await self.bot.database.is_ctf_present(data["title"], context.guild.id):
             await context.send(
@@ -299,23 +287,17 @@ class CTF(commands.Cog, name="CTF"):
             channel=channel,
         )
 
-        description = (
-            str(data["description"])[:997] + "..."
-            if len(data["description"]) >= 997
-            else data["description"]
-        )
+        description = str(data["description"])[:MAX_DESC_LENGTH] + "..." if len(data["description"]) >= MAX_DESC_LENGTH else data["description"]
 
         logger.debug(f"{data['logo']=}")
         logger.debug(f"{data['logo'] != ''=}")
 
         events = await self.create_events(
             context=context,
-            event_name=data["title"],
+            info=data,
             event_description=description,
             start_time=start_time,
             end_time=end_time,
-            url=data["url"],
-            logo=data["logo"],
         )
 
         role = await self.create_role(
