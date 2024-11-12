@@ -1,0 +1,99 @@
+# Requirements Analysis Document (RAD)
+
+## Introduzione
+
+Il progetto consiste nello sviluppo di un bot Discord in grado di automatizzare la gestione e l’organizzazione di eventi Capture The Flag (CTF) all'interno di un server Discord, basandosi sui dati forniti dall'API di CTFTime. Questo bot permetterà agli amministratori del server di creare facilmente canali, ruoli, e notifiche per ogni evento CTF, semplificando la comunicazione e il coinvolgimento dei membri della community.
+
+## Obiettivi del progetto
+
+- **Automatizzare la gestione delle CTF** all'interno dei server Discord, riducendo il carico di lavoro per gli amministratori e aumentando l'efficienza nell'organizzazione di eventi CTF.
+- **Creare e gestire canali, ruoli e eventi Discord** specifici per ogni CTF, facilitando la comunicazione e il coordinamento tra i partecipanti.
+- **Integrare con la piattaforma CTFTime** per recuperare e utilizzare informazioni accurate e aggiornate sugli eventi CTF.
+
+## Requisiti funzionali
+
+1. **Creazione automatica di canali dedicati**:
+   - Dato un URL di un evento CTF su CTFTime, il bot crea un canale dedicato per l'evento nella categoria "CTF Attive" precedentemente configurata.
+   - Il bot invia un messaggio con embed nel canale, contenente informazioni dettagliate sull'evento CTF, inclusi titolo, descrizione, date di inizio e fine, logo e link al sito di CTFTime.
+
+2. **Gestione degli eventi Discord**:
+   - Il bot crea un evento Discord per ogni CTF con le date di inizio e fine recuperate da CTFTime.
+   - All'inizio e alla fine dell'evento, il bot invia automaticamente notifiche ai partecipanti, aggiornando lo stato dell’evento nel server.
+
+3. **Gestione dei ruoli**:
+   - Creazione di un ruolo associato alla CTF per i partecipanti, con nome e permessi personalizzabili.
+   - Assegnazione automatica del ruolo ai membri che reagiscono all’embed relativo all’evento CTF nel canale dedicato, semplificando il processo di adesione.
+
+4. **Notifiche per l'inizio e la fine di ogni evento**:
+   - Quando l'evento inizia, il bot tagga automaticamente i membri con il ruolo associato nel canale della CTF, inviando un messaggio di avvio.
+   - Quando l'evento termina, il bot invia un messaggio di avviso e sposta automaticamente il canale nella categoria "CTF Archiviate", organizzando gli eventi passati.
+
+5. **Configurazione delle categorie e dei ruoli**:
+   - Comando di configurazione per definire la categoria delle CTF attive, la categoria delle CTF archiviate e il ruolo minimo richiesto per gestire le CTF (basato sulla posizione dei ruoli).
+   - Solo gli utenti con il ruolo minimo o superiore possono creare nuovi eventi CTF.
+
+## Requisiti non funzionali
+
+1. **Scalabilità**:
+   - Il bot deve essere in grado di gestire più CTF in contemporanea su diversi server, permettendo l’uso su larga scala.
+   
+2. **Affidabilità**:
+   - Gestione robusta degli errori durante la creazione di canali, eventi e ruoli. Eventuali problemi devono essere segnalati in tempo reale all'amministratore del server con messaggi di errore appropriati.
+
+3. **Sicurezza**:
+   - Accesso limitato ai comandi di gestione delle CTF, configurabile tramite ruoli. Solo gli utenti con il ruolo minimo (o superiore) possono eseguire comandi per la creazione e gestione delle CTF.
+   - Gestione sicura dei dati ricevuti da CTFTime per prevenire possibili exploit.
+
+4. **Manutenibilità e facilità di configurazione**:
+   - Documentazione chiara per gli amministratori su come configurare e utilizzare il bot.
+   - Architettura del bot che permette facilmente modifiche e aggiornamenti, garantendo compatibilità con futuri cambiamenti dell'API di CTFTime o di Discord.
+
+5. **Tempo di risposta**:
+   - Il bot deve rispondere ai comandi in modo rapido, minimizzando i tempi di attesa per gli utenti, specialmente durante la creazione di canali ed eventi.
+
+## Definizione delle feature (comandi)
+
+### Comando `/init`
+
+- **Descrizione**: Comando di inizializzazione che configura le impostazioni di base per la gestione delle CTF nel server.
+- **Parametri**:
+  - `categoria_ctf_attive`: Categoria in cui saranno inseriti i canali delle CTF attive.
+  - `categoria_ctf_archiviate`: Categoria in cui saranno spostati i canali delle CTF archiviate.
+  - `ruolo_minimo`: Ruolo minimo richiesto per poter creare e gestire le CTF, basato sulla posizione dei ruoli nel server.
+- **Funzionalità**:
+  - Imposta le categorie e il ruolo minimo richiesti per le future creazioni di CTF.
+  - Se la configurazione è completata correttamente, il bot conferma con un messaggio; in caso di errore, segnala il problema all'utente.
+
+### Comando `/create_ctf`
+
+- **Descrizione**: Comando per creare un evento CTF all'interno del server.
+- **Parametri**:
+  - `url`: URL dell’evento su CTFTime nel formato `https://ctftime.org/event/<id>`.
+- **Funzionalità**:
+  - Recupera le informazioni sulla CTF dall'API di CTFTime, verificando la validità dell’URL.
+  - Crea un canale dedicato nella categoria "CTF Attive", con un embed contenente i dettagli dell'evento.
+  - Crea un evento Discord per la CTF con date di inizio e fine, notificando i partecipanti all'inizio e alla fine dell'evento.
+  - Crea un ruolo dedicato alla CTF e lo assegna ai membri che reagiscono all'embed.
+  - Se l’evento è già presente nel server, invia un messaggio di avviso informando che la CTF esiste già.
+
+## Diagramma di flusso delle operazioni principali
+
+1. **Configurazione (`/init`)**:
+   - Admin invia il comando `/init` con i parametri necessari.
+   - Il bot salva le categorie e il ruolo minimo per gestire le CTF.
+   - Il bot conferma con un messaggio o segnala errori in caso di parametri mancanti.
+
+2. **Creazione Evento CTF (`/create_ctf`)**:
+   - Admin invia il comando `/create_ctf` con l’URL dell'evento CTFTime.
+   - Il bot verifica l'URL e recupera i dati dell'evento.
+   - Il bot crea il canale nella categoria "CTF Attive".
+   - Il bot crea l’evento Discord e il ruolo per i partecipanti.
+   - Il bot invia un embed nel canale, permette l'assegnazione del ruolo con reazione, e notifica all'inizio e alla fine dell'evento.
+
+### Considerazioni aggiuntive
+
+- **Integrazione API**: Assicurarsi che l'API di CTFTime sia accessibile e gestire eventuali limiti di rate per evitare blocchi.
+  
+## Conclusione
+
+Il bot Discord proposto automatizzerà la gestione delle CTF, semplificando la creazione e la gestione di eventi complessi e migliorando l’esperienza degli utenti del server. Grazie alla sua integrazione con CTFTime, il bot fornirà informazioni sempre aggiornate sulle CTF, mentre l'automazione dei canali, eventi e ruoli renderà l'organizzazione efficiente e professionale.
