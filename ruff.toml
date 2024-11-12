@@ -1,0 +1,58 @@
+# match black
+line-length = 150
+target-version = "py312"
+
+[lint]
+select = [
+    "ALL",    # include all the rules, including new ones
+    "E4",     # Additional specific rules
+    "E7",
+    "E9",
+    "F"
+]
+ignore = [
+    #### modules
+    "ANN",    # flake8-annotations
+    "COM",    # flake8-commas
+    "C90",    # mccabe complexity
+    "DJ",     # django
+    "EXE",    # flake8-executable
+    "T10",    # debugger
+    "TID",    # flake8-tidy-imports
+
+    #### specific rules
+    "D100",   # ignore missing docs
+    "D101",
+    "D102",
+    "D103",
+    "D104",
+    "D105",
+    "D106",
+    "D107",
+    "D200",
+    "D205",
+    "D212",
+    "D400",
+    "D401",
+    "D415",
+    "G004",   # ignore logging format
+    "E402",   # false positives for local imports
+    "TRY003", # external messages in exceptions are too verbose
+    "TD002",
+    "TD003",
+    "FIX002", # too verbose descriptions of todos
+    "D203",   # remove to avoid conflict with D211, or use D203 and remove D211
+    "ISC001"  # avoid conflicts with formatter
+]
+fixable = ["ALL"]
+unfixable = []
+
+dummy-variable-rgx = "^(_+|(_+[a-zA-Z0-9_]*[a-zA-Z0-9]+?))$"
+
+[format]
+quote-style = "double"
+indent-style = "space"
+skip-magic-trailing-comma = false
+line-ending = "auto"
+docstring-code-format = false
+docstring-code-line-length = "dynamic"
