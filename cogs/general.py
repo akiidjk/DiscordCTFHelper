@@ -66,7 +66,7 @@ class General(commands.Cog, name="general"):
         name="botinfo",
         description="Get some useful (or not) information about the bot.",
     )
-    async def botinfo(self, context: Context) -> None:
+    async def botinfo(self, interaction: discord.Interaction) -> None:
         """
         Get some useful (or not) information about the bot.
 
@@ -84,20 +84,20 @@ class General(commands.Cog, name="general"):
             value=f"/ (Slash Commands) or {self.prefix} for normal commands",
             inline=False,
         )
-        embed.set_footer(text=f"Requested by {context.author}")
-        await context.send(embed=embed)
+        embed.set_footer(text=f"Requested by {interaction.user.name}")
+        await interaction.response.send_message(embed=embed)
 
     @app_commands.command(
         name="serverinfo",
         description="Get some useful (or not) information about the server.",
     )
-    async def serverinfo(self, context: Context) -> None:
+    async def serverinfo(self, interaction: discord.Interaction) -> None:
         """
         Get some useful (or not) information about the server.
 
         :param context: The hybrid command context.
         """
-        roles = [role.name for role in context.guild.roles]
+        roles = [role.name for role in interaction.guild.roles]
         num_roles = len(roles)
         max_roles = 50
         if num_roles > max_roles:
@@ -105,21 +105,21 @@ class General(commands.Cog, name="general"):
             roles.append(f">>>> Displaying [50/{num_roles}] Roles")
         roles = ", ".join(roles)
 
-        embed = discord.Embed(title="**Server Name:**", description=f"{context.guild}", color=0xBEBEFE)
-        if context.guild.icon is not None:
-            embed.set_thumbnail(url=context.guild.icon.url)
-        embed.add_field(name="Server ID", value=context.guild.id)
-        embed.add_field(name="Member Count", value=context.guild.member_count)
-        embed.add_field(name="Text/Voice Channels", value=f"{len(context.guild.channels)}")
-        embed.add_field(name=f"Roles ({len(context.guild.roles)})", value=roles)
-        embed.set_footer(text=f"Created at: {context.guild.created_at}")
-        await context.send(embed=embed)
+        embed = discord.Embed(title="**Server Name:**", description=f"{interaction.guild}", color=0xBEBEFE)
+        if interaction.guild.icon is not None:
+            embed.set_thumbnail(url=interaction.guild.icon.url)
+        embed.add_field(name="Server ID", value=interaction.guild.id)
+        embed.add_field(name="Member Count", value=interaction.guild.member_count)
+        embed.add_field(name="Text/Voice Channels", value=f"{len(interaction.guild.channels)}")
+        embed.add_field(name=f"Roles ({len(interaction.guild.roles)})", value=roles)
+        embed.set_footer(text=f"Created at: {interaction.guild.created_at}")
+        await interaction.response.send_message(embed=embed)
 
     @app_commands.command(
         name="ping",
         description="Check if the bot is alive.",
     )
-    async def ping(self, context: Context) -> None:
+    async def ping(self, interaction: discord.Interaction) -> None:
         """
         Check if the bot is alive.
 
@@ -130,27 +130,7 @@ class General(commands.Cog, name="general"):
             description=f"The bot latency is {round(self.bot.latency * 1000)}ms.",
             color=0xBEBEFE,
         )
-        await context.send(embed=embed)
-
-    @app_commands.command(
-        name="invite",
-        description="Get the invite link of the bot to be able to invite it.",
-    )
-    async def invite(self, context: Context) -> None:
-        """
-        Get the invite link of the bot to be able to invite it.
-
-        :param context: The hybrid command context.
-        """
-        embed = discord.Embed(
-            description=f"Invite me by clicking [here]({"https://discord.com/oauth2/authorize?client_id=1304116962049134605&permissions=8&integration_type=0&scope=bot"}).",
-            color=0xD75BF4,
-        )
-        try:
-            await context.author.send(embed=embed)
-            await context.send("I sent you a private message!")
-        except discord.Forbidden:
-            await context.send(embed=embed)
+        await interaction.response.send_message(embed=embed, ephemeral=True)
 
     @app_commands.command(name="feedback", description="Submit a feedback for the owners of the bot")
     async def feedback(self, interaction: discord.Interaction) -> None:
