@@ -33,7 +33,7 @@ class LoggingFormatter(logging.Formatter):
 
 
 logger = logging.getLogger("discord_bot")
-logger.setLevel(logging.DEBUG)
+logger.setLevel(logging.INFO)
 
 # Console handler
 console_handler = logging.StreamHandler()
