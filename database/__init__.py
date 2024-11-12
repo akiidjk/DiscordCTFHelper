@@ -82,9 +82,7 @@ class DatabaseManager:
         ) as cursor:
             row = await cursor.fetchone()
             logger.debug(f"{row=}")
-            if row is None:
-                return False
-            return True
+            return row is not None
 
     async def add_server(self, server_model: ServerModel) -> bool:
         """
@@ -100,16 +98,15 @@ class DatabaseManager:
                 ),
             )
             await self.connection.commit()
-            return True
-        except Exception as e:
+        except aiosqlite.Error as e:
             logger.error(f"Error: {e}")
             return False
+        else:
+            return True
 
     async def get_server_by_id(self, server_id: int) -> ServerModel | None:
         """Get a server from the database."""
-        async with self.connection.execute(
-            "SELECT * FROM server WHERE id = ?", (server_id,)
-        ) as cursor:
+        async with self.connection.execute("SELECT * FROM server WHERE id = ?", (server_id,)) as cursor:
             row = await cursor.fetchone()
             return ServerModel(
                 id=row[0],
@@ -128,7 +125,8 @@ class DatabaseManager:
                 ),
             )
             await self.connection.commit()
-            return True
-        except Exception as e:
+        except aiosqlite.Error as e:
             logger.error(f"Error: {e}")
             return False
+        else:
+            return True
