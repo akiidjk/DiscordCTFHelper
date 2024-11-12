@@ -1,63 +1,20 @@
 import os
 import platform
 import random
+from pathlib import Path
 
+import aiofiles
 import aiosqlite
-
 import discord
+from discord import EventStatus, ScheduledEvent
 from discord.ext import commands, tasks
 from discord.ext.commands import Context
-from discord import EventStatus, ScheduledEvent
 from dotenv import load_dotenv
 
+from database import DatabaseManager
 from lib.logger import logger
 
-from database import DatabaseManager
-
-"""	
-Setup bot intents (events restrictions)
-For more information about intents, please go to the following websites:
-https://discordpy.readthedocs.io/en/latest/intents.html
-https://discordpy.readthedocs.io/en/latest/intents.html#privileged-intents
-
-
-Default Intents:
-intents.bans = True
-intents.dm_messages = True
-intents.dm_reactions = True
-intents.dm_typing = True
-intents.emojis = True
-intents.emojis_and_stickers = True
-intents.guild_messages = True
-intents.guild_reactions = True
-intents.guild_scheduled_events = True
-intents.guild_typing = True
-intents.guilds = True
-intents.integrations = True
-intents.invites = True
-intents.messages = True # `message_content` is required to get the content of the messages
-intents.reactions = True
-intents.typing = True
-intents.voice_states = True
-intents.webhooks = True
-
-Privileged Intents (Needs to be enabled on developer portal of Discord), please use them only if you need them:
-intents.members = True
-intents.message_content = True
-intents.presences = True
-"""
-
 intents = discord.Intents.all()
-
-"""
-Uncomment this if you want to use prefix (normal) commands.
-It is recommended to use slash commands and therefore not use prefix commands.
-
-If you want to use prefix commands, make sure to also enable the intent below in the Discord developer portal.
-"""
-# intents.message_content = True
-
-# Setup both of the loggers
 
 
 class DiscordBot(commands.Bot):
@@ -79,30 +36,26 @@ class DiscordBot(commands.Bot):
         self.database = None
 
     async def init_db(self) -> None:
-        async with aiosqlite.connect(
-            f"{os.path.realpath(os.path.dirname(__file__))}/database/database.db"
-        ) as db:
-            with open(
-                f"{os.path.realpath(os.path.dirname(__file__))}/database/schema.sql"
-            ) as file:
-                await db.executescript(file.read())
+        db_path = Path(__file__).parent / "database" / "database.db"
+        schema_path = Path(__file__).parent / "database" / "schema.sql"
+        async with aiosqlite.connect(str(db_path)) as db:
+            async with aiofiles.open(schema_path) as file:
+                script = await file.read()
+                await db.executescript(script)
             await db.commit()
 
     async def load_cogs(self) -> None:
         """
         The code in this function is executed whenever the bot will start.
         """
-        for file in os.listdir(f"{os.path.realpath(os.path.dirname(__file__))}/cogs"):
-            if file.endswith(".py"):
-                extension = file[:-3]
-                try:
-                    await self.load_extension(f"cogs.{extension}")
-                    self.logger.info(f"Loaded extension '{extension}'")
-                except Exception as e:
-                    exception = f"{type(e).__name__}: {e}"
-                    self.logger.error(
-                        f"Failed to load extension {extension}\n{exception}"
-                    )
+        cogs_path = Path(__file__).parent / "cogs"
+        for file in cogs_path.glob("*.py"):
+            extension = file.stem
+            try:
+                await self.load_extension(f"cogs.{extension}")
+                self.logger.info(f"Loaded extension '{extension}'")
+            except (commands.ExtensionError, ImportError):
+                self.logger.exception(f"Failed to load extension {extension}")
 
     @tasks.loop(minutes=1.0)
     async def status_task(self) -> None:
@@ -110,7 +63,7 @@ class DiscordBot(commands.Bot):
         Setup the game status task of the bot.
         """
         statuses = ["🍪", "cooking the cookies", "flagging your system!"]
-        await self.change_presence(activity=discord.Game(random.choice(statuses)))
+        await self.change_presence(activity=discord.Game(random.choice(statuses)))  # noqa: S311
 
     @status_task.before_loop
     async def before_status_task(self) -> None:
@@ -121,27 +74,18 @@ class DiscordBot(commands.Bot):
 
     async def setup_hook(self) -> None:
         """
-        This will just be executed when the bot starts the first time.
+        Will just be executed when the bot starts the first time.
         """
         self.logger.info(f"Logged in as {self.user.name}")
         self.logger.info(f"discord.py API version: {discord.__version__}")
         self.logger.info(f"Python version: {platform.python_version()}")
-        self.logger.info(
-            f"Running on: {platform.system()} {platform.release()} ({os.name})"
-        )
+        self.logger.info(f"Running on: {platform.system()} {platform.release()} ({os.name})")
         self.logger.info("-------------------")
         await self.load_cogs()
         await self.init_db()
         synced = await self.tree.sync()
-        self.logger.info(
-            f"Synced {len(synced)} commands: {', '.join([sync.name for sync in synced])}"
-        )
-        self.status_task.start()
-        self.database = DatabaseManager(
-            connection=await aiosqlite.connect(
-                f"{os.path.realpath(os.path.dirname(__file__))}/database/database.db"
-            )
-        )
+        self.logger.info(f"Synced {len(synced)} commands: {', '.join([sync.name for sync in synced])}")
+        self.database = DatabaseManager(connection=await aiosqlite.connect(str(Path(__file__).parent / "database" / "database.db")))
 
     async def on_message(self, message: discord.Message) -> None:
         """
@@ -167,9 +111,7 @@ class DiscordBot(commands.Bot):
                 f"Executed {executed_command} command in {context.guild.name} (ID: {context.guild.id}) by {context.author} (ID: {context.author.id})"
             )
         else:
-            self.logger.info(
-                f"Executed {executed_command} command by {context.author} (ID: {context.author.id}) in DMs"
-            )
+            self.logger.info(f"Executed {executed_command} command by {context.author} (ID: {context.author.id}) in DMs")
 
     async def on_command_error(self, context: Context, error) -> None:
         """
@@ -183,36 +125,30 @@ class DiscordBot(commands.Bot):
             hours, minutes = divmod(minutes, 60)
             hours = hours % 24
             embed = discord.Embed(
-                description=f"**Please slow down** - You can use this command again in {f'{round(hours)} hours' if round(hours) > 0 else ''} {f'{round(minutes)} minutes' if round(minutes) > 0 else ''} {f'{round(seconds)} seconds' if round(seconds) > 0 else ''}.",
+                description=f"**Please slow down** - You can use this command again in {f'{round(hours)} hours' if round(hours) > 0 else ''} {f'{round(minutes)} minutes' if round(minutes) > 0 else ''} {f'{round(seconds)} seconds' if round(seconds) > 0 else ''}.",  # noqa: E501
                 color=0xE02B2B,
             )
             await context.send(embed=embed)
         elif isinstance(error, commands.NotOwner):
-            embed = discord.Embed(
-                description="You are not the owner of the bot!", color=0xE02B2B
-            )
+            embed = discord.Embed(description="You are not the owner of the bot!", color=0xE02B2B)
             await context.send(embed=embed)
             if context.guild:
                 self.logger.warning(
-                    f"{context.author} (ID: {context.author.id}) tried to execute an owner only command in the guild {context.guild.name} (ID: {context.guild.id}), but the user is not an owner of the bot."
+                    f"{context.author} (ID: {context.author.id}) tried to execute an owner only command in the guild {context.guild.name} (ID: {context.guild.id}), but the user is not an owner of the bot."  # noqa: E501
                 )
             else:
                 self.logger.warning(
-                    f"{context.author} (ID: {context.author.id}) tried to execute an owner only command in the bot's DMs, but the user is not an owner of the bot."
+                    f"{context.author} (ID: {context.author.id}) tried to execute an owner only command in the bot's DMs, but the user is not an owner of the bot."  # noqa: E501
                 )
         elif isinstance(error, commands.MissingPermissions):
             embed = discord.Embed(
-                description="You are missing the permission(s) `"
-                + ", ".join(error.missing_permissions)
-                + "` to execute this command!",
+                description="You are missing the permission(s) `" + ", ".join(error.missing_permissions) + "` to execute this command!",
                 color=0xE02B2B,
             )
             await context.send(embed=embed)
         elif isinstance(error, commands.BotMissingPermissions):
             embed = discord.Embed(
-                description="I am missing the permission(s) `"
-                + ", ".join(error.missing_permissions)
-                + "` to fully perform this command!",
+                description="I am missing the permission(s) `" + ", ".join(error.missing_permissions) + "` to fully perform this command!",
                 color=0xE02B2B,
             )
             await context.send(embed=embed)
@@ -226,9 +162,15 @@ class DiscordBot(commands.Bot):
         else:
             raise error
 
-    async def on_scheduled_event_update(
-        self, before: ScheduledEvent, after: ScheduledEvent
-    ) -> None:
+    async def on_scheduled_event_update(self, before: ScheduledEvent, after: ScheduledEvent) -> None:
+        """
+        Handles updates to scheduled events in Discord.
+
+        Args:
+            before (ScheduledEvent): Before the update
+            after (ScheduledEvent): After the update
+
+        """
         if before.status != after.status and after.status == EventStatus.active:
             ctf = await self.database.get_ctf_by_name(after.name, after.guild.id)
 
@@ -238,9 +180,7 @@ class DiscordBot(commands.Bot):
 
             channel = self.get_channel(ctf.text_channel_id)
 
-            await channel.send(
-                f"<@&{ctf.role_id}> The CTF has started! Good luck to all participants! :tada:"
-            )
+            await channel.send(f"<@&{ctf.role_id}> The CTF has started! Good luck to all participants! :tada:")
 
         if before.status != after.status and after.status == EventStatus.completed:
             ctf = await self.database.get_ctf_by_name(after.name, after.guild.id)
@@ -254,21 +194,21 @@ class DiscordBot(commands.Bot):
 
             server = await self.database.get_server_by_id(after.guild.id)
 
-            await channel.edit(
-                category=after.guild.get_channel(server.archive_category_id)
-            )
+            await channel.edit(category=after.guild.get_channel(server.archive_category_id))
 
-            await role.edit(
-                color=discord.Color.light_gray(), hoist=False, mentionable=False
-            )
+            await role.edit(color=discord.Color.light_gray(), hoist=False, mentionable=False)
 
-            await channel.send(
-                f"The CTF **{ctf.name}** has ended! The channel has been moved to the archived category."
-            )
+            await channel.send(f"The CTF **{ctf.name}** has ended! The channel has been moved to the archived category.")
 
-    async def on_reaction_add(
-        self, reaction: discord.Reaction, user: discord.Member
-    ) -> None:
+    async def on_reaction_add(self, reaction: discord.Reaction, user: discord.Member) -> None:
+        """
+        Handles the event when a reaction is added to a message.
+
+        Args:
+            reaction (discord.Reaction): The reaction that was added
+            user (discord.Member): The user that added the reaction
+
+        """
         if user.bot:
             return
 
@@ -282,9 +222,15 @@ class DiscordBot(commands.Bot):
         role = message.guild.get_role(ctf.role_id)
         await user.add_roles(role)
 
-    async def on_reaction_remove(
-        self, reaction: discord.Reaction, user: discord.Member
-    ) -> None:
+    async def on_reaction_remove(self, reaction: discord.Reaction, user: discord.Member) -> None:
+        """
+        Handles the event when a reaction is removed from a message.
+
+        Args:
+            reaction (discord.Reaction): The reaction that was removed
+            user (discord.Member): The user that removed the reaction
+
+        """
         if user.bot:
             return
 
