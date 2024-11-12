@@ -1,4 +1,4 @@
-from datetime import datetime, timezone, UTC
+from datetime import UTC, datetime
 
 from discord import CategoryChannel, Color, Embed, EntityType, Message, PrivacyLevel, Role, TextChannel, app_commands
 from discord.errors import HTTPException
@@ -175,9 +175,9 @@ class CTF(commands.Cog, name="CTF"):
 
     # * -----------------------------------------------------------------------
 
-    @commands.hybrid_command(
-        name="set_category",
-        description="Set the category for the active and archived CTF.",
+    @app_commands.command(
+        name="init",
+        description="Initialize the CTF bot in the discord server.",
     )
     @app_commands.describe(
         category_active="The name of the category for the next or current ctf",
@@ -192,7 +192,7 @@ class CTF(commands.Cog, name="CTF"):
         min_role: Role,
     ) -> None:
         """
-        Set the category for the active CTF and the category for the archived CTF in the file.
+        Initialize the CTF bot.
 
         :param context: The application command context.
         :param category_archived: The category for the archived CTF.
@@ -230,7 +230,7 @@ class CTF(commands.Cog, name="CTF"):
 
     # * -----------------------------------------------------------------------
 
-    @commands.hybrid_command(
+    @app_commands.command(
         name="create_ctf",
         description="Create a CTF event in the discord server.",
     )
