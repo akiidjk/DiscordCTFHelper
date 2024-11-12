@@ -1,7 +1,9 @@
 import io
 import re
+from pathlib import Path
+
+import aiofiles
 import aiohttp
-import requests
 from PIL import Image
 
 from lib.logger import logger
@@ -18,31 +20,30 @@ async def get_logo(url: str) -> bytes:
 
     Returns:
         bytes: The logo of the CTF.
+
     """
     if url:
         try:
-            async with aiohttp.ClientSession() as session:
-                async with session.get(
-                    url, headers={"User-Agent": "CookieBot"}
-                ) as response:
-                    if response.status == 200:
-                        content = await response.read()
-                        with Image.open(io.BytesIO(content)) as pillow_img:
-                            if pillow_img.format != "PNG":
-                                image_buffer = io.BytesIO()
-                                pillow_img.save(image_buffer, format="PNG")
-                                return image_buffer.getvalue()
-                            else:
-                                return content
-                    else:
-                        logger.error(
-                            f"Failed to retrieve image. Status code: {response.status}"
-                        )
-        except Exception as e:
-            logger.error(f"Error fetching logo: {e}")
+            async with (
+                aiohttp.ClientSession() as session,
+                session.get(url, headers={"User-Agent": "CookieBot"}) as response,
+            ):
+                if response.status == 200:
+                    content = await response.read()
+                    with Image.open(io.BytesIO(content)) as pillow_img:
+                        if pillow_img.format != "PNG":
+                            image_buffer = io.BytesIO()
+                            pillow_img.save(image_buffer, format="PNG")
+                            return image_buffer.getvalue()
 
-    with open("images/default.png", "rb") as default_img:
-        return default_img.read()
+                        return content
+                else:
+                    logger.error(f"Failed to retrieve image. Status code: {response.status}")
+        except (OSError, aiohttp.ClientError) as e:
+            logger.error(f"Failed to retrieve image: {e}")
+
+    async with aiofiles.open(Path("images/default.png"), "rb") as default_img:
+        return await default_img.read()
 
 
 def check_url(url: str) -> bool:
@@ -64,6 +65,7 @@ async def get_ctf_info(url: str) -> dict | None:
 
     Returns:
         dict: The information of the CTF.
+
     """
     if url.endswith("/"):
         url = url[:-1]
@@ -71,18 +73,15 @@ async def get_ctf_info(url: str) -> dict | None:
     logger.debug(f"Getting information for event with ID {id_event}")
     logger.debug(f"GET {BASE_URL}/events/{id_event}/")
 
-    async with aiohttp.ClientSession() as session:
-        async with session.get(
-            f"{BASE_URL}/events/{id_event}/", headers={"User-Agent": "CookieBot"}
-        ) as response:
-            logger.debug(f"Response status code: {response.status}")
-            response_text = await response.text()
-            logger.debug(f"Response data: {response_text}")
+    async with (
+        aiohttp.ClientSession() as session,
+        session.get(f"{BASE_URL}/events/{id_event}/", headers={"User-Agent": "CookieBot"}) as response,
+    ):
+        logger.debug(f"Response status code: {response.status}")
+        response_text = await response.text()
+        logger.debug(f"Response data: {response_text}")
 
-            if response.status == 200:
-                return await response.json()
-            else:
-                logger.error(
-                    f"Failed to retrieve CTF information. Status code: {response.status}"
-                )
-                return None
+        if response.status == 200:  # noqa: PLR2004
+            return await response.json()
+        logger.error(f"Failed to retrieve CTF information. Status code: {response.status}")
+        return None
