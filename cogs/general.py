@@ -36,6 +36,7 @@ class General(commands.Cog, name="general"):
         self.bot.tree.add_command(self.context_menu_user)
         self.context_menu_message = app_commands.ContextMenu(name="Remove spoilers", callback=self.remove_spoilers)
         self.bot.tree.add_command(self.context_menu_message)
+        self.prefix = "!"
 
     # Message context menu command
     async def remove_spoilers(self, interaction: discord.Interaction, message: discord.Message) -> None:
@@ -75,7 +76,7 @@ class General(commands.Cog, name="general"):
 
     @commands.hybrid_command(name="help", description="List all commands the bot has loaded.")
     async def help(self, context: Context) -> None:
-        prefix = self.bot.config["prefix"]
+        prefix = self.prefix
         embed = discord.Embed(title="Help", description="List of available commands:", color=0xBEBEFE)
         for cog_name, cog in self.bot.cogs.items():
             if cog_name.lower() == "owner" and not (await self.bot.is_owner(context.author)):
@@ -120,7 +121,7 @@ class General(commands.Cog, name="general"):
         embed.add_field(name="Python Version:", value=f"{platform.python_version()}", inline=True)
         embed.add_field(
             name="Prefix:",
-            value=f"/ (Slash Commands) or {self.bot.config['prefix']} for normal commands",
+            value=f"/ (Slash Commands) or {self.prefix} for normal commands",
             inline=False,
         )
         embed.set_footer(text=f"Requested by {context.author}")
@@ -182,7 +183,7 @@ class General(commands.Cog, name="general"):
         :param context: The hybrid command context.
         """
         embed = discord.Embed(
-            description=f"Invite me by clicking [here]({self.bot.config['invite_link']}).",
+            description=f"Invite me by clicking [here]({"https://discord.com/oauth2/authorize?client_id=1304116962049134605&permissions=8&integration_type=0&scope=bot"}).",
             color=0xD75BF4,
         )
         try:
