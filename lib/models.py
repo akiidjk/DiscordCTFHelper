@@ -21,3 +21,4 @@ class ServerModel:
     id: int
     active_category_id: int
     archive_category_id: int
+    min_role_id: int

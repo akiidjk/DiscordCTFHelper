@@ -1,7 +1,8 @@
 CREATE TABLE IF NOT EXISTS server (
   id INTEGER PRIMARY KEY,
   active_category_id INTEGER NOT NULL,
-  archive_category_id INTEGER NOT NULL
+  archive_category_id INTEGER NOT NULL,
+  min_role_id INTEGER NOT NULL
 );
 
 CREATE TABLE IF NOT EXISTS ctf (

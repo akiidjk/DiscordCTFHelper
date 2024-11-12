@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timezone, UTC
 
 from discord import CategoryChannel, Color, Embed, EntityType, Message, PrivacyLevel, Role, TextChannel, app_commands
 from discord.errors import HTTPException
@@ -17,6 +17,7 @@ class CTF(commands.Cog, name="CTF"):
         self.bot = bot
         self.category_active_id = None
         self.category_archived_id = None
+        self.min_role_id = None
 
     async def create_events(
         self,
@@ -77,6 +78,8 @@ class CTF(commands.Cog, name="CTF"):
             logger.debug(f"{server=}")
             self.category_active_id = server.active_category_id
             self.category_archived_id = server.archive_category_id
+            self.min_role_id = server.min_role_id
+
         except HTTPException as e:
             logger.error(f"Error: {e}")
             return False
@@ -129,7 +132,7 @@ class CTF(commands.Cog, name="CTF"):
                 title=data["title"],
                 description=description,
                 url=data["url"],
-                timestamp=datetime.now(tz=datetime.timezone.utc),
+                timestamp=datetime.now(tz=UTC),
                 color=0xBEBEFE,
             )
             .set_thumbnail(url=data["logo"])
@@ -179,12 +182,14 @@ class CTF(commands.Cog, name="CTF"):
     @app_commands.describe(
         category_active="The name of the category for the next or current ctf",
         category_archived="The name of the category for the archived ctf",
+        min_role="The minimum role required to run the create_ctf command",
     )
     async def init(
         self,
         context: Context,
         category_active: CategoryChannel,
         category_archived: CategoryChannel,
+        min_role: Role,
     ) -> None:
         """
         Set the category for the active CTF and the category for the archived CTF in the file.
@@ -193,16 +198,28 @@ class CTF(commands.Cog, name="CTF"):
         :param category_archived: The category for the archived CTF.
         :param category_active: The category for the active CTF.
         """
+        if not context.author.guild_permissions.administrator:
+            await context.send(
+                "You need to be the admin of the server to run this command. ❌",
+                ephemeral=True,
+            )
+            return
+
         id_active = category_active.id
         id_archived = category_archived.id
+        min_role_id = min_role.id
         self.category_active_id = id_active
         self.category_archived_id = id_archived
+        self.min_role_id = min_role_id
+
+        logger.debug(f"{min_role_id=}")
 
         await self.bot.database.add_server(
             ServerModel(
                 id=context.guild.id,
                 active_category_id=id_active,
                 archive_category_id=id_archived,
+                min_role_id=min_role_id,
             )
         )
 
@@ -227,6 +244,27 @@ class CTF(commands.Cog, name="CTF"):
         :param context: The application command context.
         :param url: The URL of the CTF.
         """
+        if not self.category_active_id or not self.min_role_id:
+            res = await self.set_cat(server_id=context.guild.id)
+            if not res:
+                await context.send(
+                    "Failed to set the category. ❌ Please check the configuration or contact support.",
+                    ephemeral=True,
+                )
+                return
+
+        min_role = context.guild.get_role(self.min_role_id)
+
+        logger.debug(f"{min_role.position=}")
+        logger.debug(f"{context.author.top_role.position=}")
+
+        if context.author.top_role.position < min_role.position:
+            await context.send(
+                "You don't have the required role to run this command. ❌",
+                ephemeral=True,
+            )
+            return
+
         await context.defer(ephemeral=True)
         result = check_url(url)
 
@@ -259,16 +297,6 @@ class CTF(commands.Cog, name="CTF"):
             return
 
         logger.debug(f"{self.category_active_id=}")
-
-        if not self.category_active_id:
-            logger.debug("Setting the category")
-            res = await self.set_cat(server_id=context.guild.id)
-            if not res:
-                await context.send(
-                    "Failed to set the category. ❌ Please check the configuration or contact support.",
-                    ephemeral=True,
-                )
-                return
 
         logger.debug(f"{self.category_active_id=}")
 
