@@ -1,6 +1,6 @@
 # CookieBotDiscord
 
-## SDD
+## System Design Definition (SDD)
 
 ### 1. **Introduzione**
 
