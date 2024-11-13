@@ -90,6 +90,69 @@ Il progetto consiste nello sviluppo di un bot Discord in grado di automatizzare 
    - Il bot crea l’evento Discord e il ruolo per i partecipanti.
    - Il bot invia un embed nel canale, permette l'assegnazione del ruolo con reazione, e notifica all'inizio e alla fine dell'evento.
 
+## Casi d'Uso
+
+### Caso d’Uso 1: Configurazione iniziale del bot
+
+- **Attori**: Amministratore del server Discord
+- **Descrizione**: L'amministratore del server esegue il comando `/init` per configurare le impostazioni di base per la gestione delle CTF.
+- **Flusso principale**:
+  1. L'amministratore esegue il comando `/init` specificando le categorie e il ruolo minimo per gestire le CTF.
+  2. Il bot salva le impostazioni e conferma la configurazione.
+- **Estensioni**:
+  - Se il comando `/init` non include tutti i parametri necessari, il bot invia un messaggio d'errore e richiede le informazioni mancanti.
+- **Pre-condizioni**: L'amministratore deve avere i permessi necessari per eseguire il comando.
+- **Post-condizioni**: La configurazione del bot è completata, pronta per l'uso.
+
+### Caso d’Uso 2: Creazione di un evento CTF
+
+- **Attori**: Amministratore del server Discord
+- **Descrizione**: L'amministratore crea un nuovo evento CTF utilizzando il comando `/create_ctf`.
+- **Flusso principale**:
+  1. L'amministratore invia il comando `/create_ctf` con l’URL dell’evento su CTFTime.
+  2. Il bot recupera le informazioni sull'evento dall'API di CTFTime.
+  3. Il bot crea un canale nella categoria "CTF Attive" e pubblica un embed con i dettagli dell’evento.
+  4. Il bot crea un evento Discord per il CTF, definendo le date di inizio e fine.
+  5. Il bot crea un ruolo per i partecipanti e assegna il ruolo agli utenti che reagiscono all’embed nel canale.
+  6. Il bot programma le notifiche per l'inizio e la fine dell'evento.
+- **Estensioni**:
+  - Se l’URL dell'evento non è valido o l'API di CTFTime non risponde, il bot invia un messaggio d'errore all'amministratore.
+  - Se l'evento CTF esiste già nel server, il bot invia un avviso senza duplicare i canali o ruoli.
+- **Pre-condizioni**: Il bot deve essere stato configurato con il comando `/init`.
+- **Post-condizioni**: L'evento CTF è creato con canale, embed informativo, evento Discord e ruolo partecipanti.
+
+### Caso d’Uso 3: Partecipazione dei membri a una CTF
+
+- **Attori**: Membro del server Discord
+- **Descrizione**: Un membro del server si unisce all'evento CTF reagendo all'embed informativo nel canale dedicato.
+- **Flusso principale**:
+  1. Il membro del server visualizza l'embed con le informazioni della CTF nel canale.
+  2. Il membro reagisce all'embed con l’emoji appropriata.
+  3. Il bot assegna automaticamente al membro il ruolo creato per la CTF.
+- **Estensioni**:
+  - Se l'utente non ha i permessi necessari per accedere al canale o reagire all'embed, il bot segnala l'errore e non assegna il ruolo.
+- **Pre-condizioni**: L'evento CTF deve essere stato creato e il ruolo configurato per le reazioni.
+- **Post-condizioni**: Il membro ottiene il ruolo della CTF e accesso completo al canale dedicato.
+
+### Caso d’Uso 4: Notifica di inizio evento
+
+- **Attori**: Bot Discord
+- **Descrizione**: Quando la data di inizio di un evento CTF è raggiunta, il bot invia automaticamente una notifica nel canale dedicato.
+- **Flusso principale**:
+  1. All'ora di inizio dell'evento, il bot invia un messaggio nel canale della CTF, taggando i membri con il ruolo associato per informarli dell'inizio dell'evento.
+- **Pre-condizioni**: Il canale e il ruolo della CTF devono essere stati creati, e il bot deve avere i permessi per inviare notifiche.
+- **Post-condizioni**: I partecipanti vengono notificati dell'inizio della CTF.
+
+### Caso d’Uso 5: Conclusione e archiviazione dell'evento
+
+- **Attori**: Bot Discord
+- **Descrizione**: Alla fine di un evento CTF, il bot notifica i partecipanti e archivia il canale.
+- **Flusso principale**:
+  1. Alla data di fine dell'evento, il bot invia un messaggio nel canale della CTF informando i partecipanti della conclusione dell'evento.
+  2. Il bot sposta automaticamente il canale della CTF nella categoria "CTF Archiviate" per organizzare gli eventi passati.
+- **Pre-condizioni**: L'evento deve essere attivo e il bot configurato con le categorie per l'archiviazione.
+- **Post-condizioni**: Il canale viene archiviato e i membri vengono informati del termine dell'evento.
+
 ### Considerazioni aggiuntive
 
 - **Integrazione API**: Assicurarsi che l'API di CTFTime sia accessibile e gestire eventuali limiti di rate per evitare blocchi.
