@@ -11,7 +11,6 @@ from lib.logger import logger
 
 BASE_URL = "https://ctftime.org/api/v1"
 
-
 USER_AGENT_LIST = [
     "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/13.0.5 Safari/605.1.15",
     "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/103.0.5060.53 Safari/537.36",
@@ -63,10 +62,14 @@ async def get_logo(url: str) -> bytes:
 
 def check_url(url: str) -> bool:
     """
-    Check if the URL is valid.
+    Check if the URL is a valid CTFTime URL.
 
-    :param url: The URL to check.
-    :return: True if the URL is valid, False otherwise.
+    Args:
+        url (str): The URL to check.
+
+    Returns:
+        bool: True if the URL is a valid CTFTime URL, False otherwise.
+
     """
     return bool(re.match(r"^https://ctftime.org/event/\d+$", url))
 
