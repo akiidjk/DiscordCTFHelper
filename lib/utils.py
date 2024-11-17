@@ -1,4 +1,5 @@
 import io
+import random
 import re
 from pathlib import Path
 
@@ -9,6 +10,20 @@ from PIL import Image
 from lib.logger import logger
 
 BASE_URL = "https://ctftime.org/api/v1"
+
+
+USER_AGENT_LIST = [
+    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/13.0.5 Safari/605.1.15",
+    "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/103.0.5060.53 Safari/537.36",
+    "Mozilla/5.0 (Windows NT 10.0; Windows; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/103.0.5060.114 Safari/537.36",
+    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_10_5) AppleWebKit/603.3.8 (KHTML, like Gecko) Version/10.1.2 Safari/603.3.8",
+    "Mozilla/5.0 (Windows NT 10.0; Windows; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/103.0.5060.114 Safari/537.36",
+    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/14.0 Safari/605.1.15",
+    "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/103.0.5060.53 Safari/537.36",
+    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_6) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/14.0 Safari/605.1.15",
+    "Mozilla/5.0 (Windows NT 10.0; Windows; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/103.0.5060.114 Safari/537.36",
+    "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/103.0.5060.53 Safari/537.36",
+]
 
 
 async def get_logo(url: str) -> bytes:
@@ -26,7 +41,7 @@ async def get_logo(url: str) -> bytes:
         try:
             async with (
                 aiohttp.ClientSession() as session,
-                session.get(url, headers={"User-Agent": "CookieBot"}) as response,
+                session.get(url, headers={"User-Agent": random.choice(USER_AGENT_LIST)}) as response,  # noqa: S311
             ):
                 if response.status == 200:
                     content = await response.read()
@@ -75,7 +90,7 @@ async def get_ctf_info(url: str) -> dict | None:
 
     async with (
         aiohttp.ClientSession() as session,
-        session.get(f"{BASE_URL}/events/{id_event}/", headers={"User-Agent": "CookieBot"}) as response,
+        session.get(f"{BASE_URL}/events/{id_event}/", headers={"User-Agent": random.choice(USER_AGENT_LIST)}) as response,  # noqa: S311
     ):
         logger.debug(f"Response status code: {response.status}")
         response_text = await response.text()
