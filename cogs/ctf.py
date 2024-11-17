@@ -149,6 +149,12 @@ class CTF(commands.Cog, name="CTF"):
 
     async def create_role(self, interaction: Interaction, name: str) -> Role:
         guild = interaction.guild
+
+        color = Color.random()
+
+        while color != Color.light_gray():
+            color = color.random()
+
         role = await interaction.guild.create_role(
             name=name,
             color=Color.random(),
