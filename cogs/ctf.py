@@ -152,7 +152,7 @@ class CTF(commands.Cog, name="CTF"):
 
         color = Color.random()
 
-        while color != Color.light_gray():
+        while color == Color.light_gray():
             color = color.random()
 
         role = await interaction.guild.create_role(
