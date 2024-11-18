@@ -80,11 +80,11 @@
 ## RAD
 
 - [Rad EN](/docs/RAD_en.pdf)
-- [Rad IT](/docs/RAD_it.pdf)****
+- [Rad IT](/docs/RAD_it.pdf)
 
 ## License  
 
-This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.  
+This project is licensed under the Apache License. See the [LICENSE](LICENSE) file for details.  
 
 ## Contact  
 
