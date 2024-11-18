@@ -103,3 +103,18 @@ async def get_ctf_info(url: str) -> dict | None:
             return await response.json()
         logger.error(f"Failed to retrieve CTF information. Status code: {response.status}")
         return None
+
+
+def sanitize_input(inp: str) -> str:
+    """
+    Sanitize the input.
+
+    Args:
+        inp (str): The input to sanitize.
+
+    Returns:
+        str: The sanitized input.
+
+    """
+    inp = inp.strip()
+    return re.sub(r"[^a-zA-Z0-9-_|\s]", "", inp)
