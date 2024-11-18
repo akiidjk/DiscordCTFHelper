@@ -62,7 +62,12 @@ class DiscordBot(commands.Bot):
         """
         Setup the game status task of the bot.
         """
-        statuses = ["🍪", "cooking the cookies", "flagging your system!"]
+        statuses = [
+            "Setting up your CTF events...",
+            "Syncing with CTFTime's latest info...",
+            "Retrieving event details from CTFTime...",
+            "Preparing for your next CTF event...",
+        ]
         await self.change_presence(activity=discord.Game(random.choice(statuses)))  # noqa: S311
 
     @status_task.before_loop
