@@ -175,7 +175,7 @@ class DiscordBot(commands.Bot):
             ctf = await self.database.get_ctf_by_name(after.name, after.guild.id)
 
             if ctf is None:
-                logger.info(f"CTF {after.name} not found in database")
+                logger.info(f"CTF {after.name=} not found in database")
                 return
 
             channel = self.get_channel(ctf.text_channel_id)
