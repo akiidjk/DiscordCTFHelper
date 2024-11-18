@@ -29,7 +29,16 @@ class DatabaseManager:
     async def get_ctf_by_name(self, name: str, server_id: int) -> CTFModel:
         """
         Get a CTF from the database.
+
+        Args:
+            name (str): The name of the CTF.
+            server_id (int): The server ID.
+
+        Returns:
+            CTFModel: The CTF.
+
         """
+        logger.debug(f"{name=}, {server_id=}")
         async with self.connection.execute(
             "SELECT * FROM ctf WHERE name = ? AND server_id = ?",
             (
@@ -39,6 +48,10 @@ class DatabaseManager:
         ) as cursor:
             row = await cursor.fetchone()
             logger.debug(f"{row=}")
+
+            if row is None:
+                return None
+
             return CTFModel(
                 server_id=row[1],
                 name=row[2],
@@ -52,6 +65,14 @@ class DatabaseManager:
     async def get_ctf_by_message_id(self, message_id: int, server_id: int) -> CTFModel:
         """
         Get a CTF from the database.
+
+        Args:
+            message_id (int): The message ID.
+            server_id (int): The server ID.
+
+        Returns:
+            CTFModel: The CTF.
+
         """
         async with self.connection.execute(
             "SELECT * FROM ctf WHERE msg_id = ? AND server_id = ?",
@@ -62,6 +83,8 @@ class DatabaseManager:
         ) as cursor:
             row = await cursor.fetchone()
             logger.debug(f"{row=}")
+            if row is None:
+                return None
             return CTFModel(
                 server_id=row[1],
                 name=row[2],
@@ -73,6 +96,17 @@ class DatabaseManager:
             )
 
     async def is_ctf_present(self, name: str, server_id: int) -> bool:
+        """
+        Check if a CTF is present in the database.
+
+        Args:
+            name (str): name of the CTF
+            server_id (int): The server ID.
+
+        Returns:
+            bool: True if the CTF is present, False otherwise.
+
+        """
         async with self.connection.execute(
             "SELECT * FROM ctf WHERE name = ? AND server_id = ?",
             (
@@ -86,7 +120,14 @@ class DatabaseManager:
 
     async def add_server(self, server_model: ServerModel) -> bool:
         """
-        Add a server to the database.
+        Add a server to the database
+
+        Args:
+            server_model (ServerModel): The server model to add.
+
+        Returns:
+            bool: True if the server was added, False otherwise.
+
         """
         try:
             await self.connection.execute(
@@ -106,9 +147,20 @@ class DatabaseManager:
             return True
 
     async def get_server_by_id(self, server_id: int) -> ServerModel | None:
-        """Get a server from the database."""
+        """
+        Get a server from the database.
+
+        Args:
+            server_id (int): The server ID.
+
+        Returns:
+            ServerModel | None: The server.
+
+        """
         async with self.connection.execute("SELECT * FROM server WHERE id = ?", (server_id,)) as cursor:
             row = await cursor.fetchone()
+            if row is None:
+                return None
             return ServerModel(
                 id=row[0],
                 active_category_id=row[1],
@@ -117,6 +169,16 @@ class DatabaseManager:
             )
 
     async def edit_category(self, server_model: ServerModel) -> bool:
+        """
+        Edit the category of a server
+
+        Args:
+            server_model (ServerModel): The server model to edit.
+
+        Returns:
+            bool: True if the category was edited, False otherwise.
+
+        """
         try:
             await self.connection.execute(
                 "UPDATE server SET active_category_id = ? AND set archive_category_id = ? WHERE id = ?",
@@ -125,6 +187,29 @@ class DatabaseManager:
                     server_model.archive_category_id,
                     server_model.id,
                 ),
+            )
+            await self.connection.commit()
+        except aiosqlite.Error as e:
+            logger.error(f"Error: {e}")
+            return False
+        else:
+            return True
+
+    async def delete_server(self, server_id: int) -> bool:
+        """
+        Delete a server from the database
+
+        Args:
+            server_id: The server ID.
+
+        Returns:
+            bool: True if the server was deleted, False otherwise.
+
+        """
+        try:
+            await self.connection.execute(
+                "DELETE FROM server WHERE id = ?",
+                (server_id,),
             )
             await self.connection.commit()
         except aiosqlite.Error as e:
