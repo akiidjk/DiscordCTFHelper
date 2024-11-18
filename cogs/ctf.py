@@ -6,7 +6,7 @@ from discord.ext import commands
 
 from lib.logger import logger
 from lib.models import CTFModel, ServerModel
-from lib.utils import check_url, get_ctf_info, get_logo
+from lib.utils import check_url, get_ctf_info, get_logo, sanitize_input
 
 MAX_DESC_LENGTH = 997
 
@@ -27,14 +27,15 @@ class CTF(commands.Cog, name="CTF"):
         end_time: datetime,
     ) -> None:
         """
-        Create the events for the CTF.
+        Create a scheduled event in the discord server.
 
-        :param context: The application command context.
-        :param event_name: The name of the event.
-        :param event_description: The description of the event.
-        :param channel: The channel where the event will be created.
-        :param start_time: The start time of the event.
-        :param end_time: The end time of the event.
+        Args:
+            interaction (Interaction): The application command context.
+            info (dict): The information of the CTF.
+            event_description (str): The description of the event.
+            start_time (datetime): The start time of the event.
+            end_time (datetime): The end time of the event.
+
         """
         guild = interaction.guild
         image_logo = await get_logo(info["logo"])
@@ -197,18 +198,26 @@ class CTF(commands.Cog, name="CTF"):
         min_role: Role,
     ) -> None:
         """
-        Initialize the CTF bot.
+        Initialize the CTF bot in the discord server.
 
-        :param context: The application command context.
-        :param category_archived: The category for the archived CTF.
-        :param category_active: The category for the active CTF.
+        Args:
+            interaction (Interaction): The application command context.
+            category_active (CategoryChannel): The name of the category for the next or current ctf
+            category_archived (CategoryChannel): The name of the category for the archived ctf
+            min_role (Role): The minimum role required to run the create_ctf command
+
         """
+        await interaction.response.defer(ephemeral=True)
+
         if not interaction.user.guild_permissions.administrator:
             await interaction.followup.send(
                 "You need to be the admin of the server to run this command. ❌",
                 ephemeral=True,
             )
             return
+
+        if await self.bot.database.get_server_by_id(interaction.guild.id):
+            await self.bot.database.delete_server(interaction.guild.id)
 
         id_active = category_active.id
         id_archived = category_archived.id
@@ -229,7 +238,7 @@ class CTF(commands.Cog, name="CTF"):
         )
 
         await interaction.followup.send(
-            content=f"Successfully! set the category for the active CTF to {category_active.name} and the category for the archived CTF to {category_archived.name}. ✅",  # noqa: E501
+            content=f"Successfully set the category for the active CTF to {category_active.name} and the category for the archived CTF to {category_archived.name}! ✅",  # noqa: E501
             ephemeral=True,
         )
 
@@ -246,8 +255,10 @@ class CTF(commands.Cog, name="CTF"):
         """
         Create a CTF event in the discord server.
 
-        :param context: The application command context.
-        :param url: The URL of the CTF.
+        Args:
+            interaction (Interaction): The application command context.
+            url (str): The URL of the event
+
         """
         if not self.category_active_id or not self.min_role_id:
             res = await self.set_cat(server_id=interaction.guild.id)
@@ -292,6 +303,7 @@ class CTF(commands.Cog, name="CTF"):
         start_time = datetime.fromisoformat(data["start"])
         end_time = datetime.fromisoformat(data["finish"])
 
+        data["title"] = sanitize_input(data["title"])
         data["title"] = data["title"] + " - " + f"{start_time.year!s}"
 
         if await self.bot.database.is_ctf_present(data["title"], interaction.guild.id):
