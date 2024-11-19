@@ -79,8 +79,10 @@ class CTF(commands.Cog, name="CTF"):
             self.category_active_id = server.active_category_id
             self.category_archived_id = server.archive_category_id
             self.min_role_id = server.min_role_id
-
         except HTTPException as e:
+            logger.error(f"Error: {e}")
+            return False
+        except AttributeError as e:
             logger.error(f"Error: {e}")
             return False
         else:
@@ -163,15 +165,15 @@ class CTF(commands.Cog, name="CTF"):
             hoist=True,
         )
 
-        bot_top_role = guild.me.top_role
+        min_permission_role = interaction.guild.get_role(self.min_role_id)
 
-        manageable_roles = [role for role in guild.roles if role.position < bot_top_role.position]
+        manageable_roles = [role for role in guild.roles if role.position < min_permission_role.position]
 
         logger.debug([str(role.position) + " " + str(role.name) for role in manageable_roles])
 
         lowest_manageable_role = max(manageable_roles, key=lambda r: r.position)
 
-        new_position = max(lowest_manageable_role.position + 1, bot_top_role.position - 1)
+        new_position = max(lowest_manageable_role.position + 1, min_permission_role.position - 1)
 
         logger.debug(f"{new_position=}")
 
@@ -260,6 +262,8 @@ class CTF(commands.Cog, name="CTF"):
             url (str): The URL of the event
 
         """
+        await interaction.response.defer(ephemeral=True)
+
         if not self.category_active_id or not self.min_role_id:
             res = await self.set_cat(server_id=interaction.guild.id)
             if not res:
@@ -281,7 +285,6 @@ class CTF(commands.Cog, name="CTF"):
             )
             return
 
-        await interaction.response.defer(ephemeral=True)
         result = check_url(url)
 
         if not result:
