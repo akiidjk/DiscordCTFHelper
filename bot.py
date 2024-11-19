@@ -203,7 +203,7 @@ class DiscordBot(commands.Bot):
 
             await role.edit(color=discord.Color.light_gray(), hoist=False, mentionable=False)
 
-            await channel.send(f"The CTF **{ctf.name}** has ended! The channel has been moved to the archived category.")
+            await channel.send(f"<@&{ctf.role_id}> The CTF **{ctf.name}** has ended! The channel has been moved to the archived category.")
 
     async def on_reaction_add(self, reaction: discord.Reaction, user: discord.Member) -> None:
         """
