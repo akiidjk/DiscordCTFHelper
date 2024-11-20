@@ -16,7 +16,7 @@ class CTF(commands.Cog, name="CTF"):
         self.bot = bot
         self.category_active_id = None
         self.category_archived_id = None
-        self.min_role_id = None
+        self.role_manager_id = None
 
     async def create_events(
         self,
@@ -78,7 +78,7 @@ class CTF(commands.Cog, name="CTF"):
             logger.debug(f"{server=}")
             self.category_active_id = server.active_category_id
             self.category_archived_id = server.archive_category_id
-            self.min_role_id = server.min_role_id
+            self.role_manager_id = server.role_manager_id
         except HTTPException as e:
             logger.error(f"Error: {e}")
             return False
@@ -151,35 +151,17 @@ class CTF(commands.Cog, name="CTF"):
         return msg
 
     async def create_role(self, interaction: Interaction, name: str) -> Role:
-        guild = interaction.guild
-
         color = Color.random()
 
         while color == Color.light_gray():
             color = color.random()
 
-        role = await interaction.guild.create_role(
+        return await interaction.guild.create_role(
             name=name,
             color=Color.random(),
             mentionable=True,
             hoist=True,
         )
-
-        min_permission_role = interaction.guild.get_role(self.min_role_id)
-
-        manageable_roles = [role for role in guild.roles if role.position < min_permission_role.position]
-
-        logger.debug([str(role.position) + " " + str(role.name) for role in manageable_roles])
-
-        lowest_manageable_role = max(manageable_roles, key=lambda r: r.position)
-
-        new_position = max(lowest_manageable_role.position + 1, min_permission_role.position - 1)
-
-        logger.debug(f"{new_position=}")
-
-        await guild.edit_role_positions({role: new_position})
-
-        return role
 
     # * -----------------------------------------------------------------------
 
@@ -190,14 +172,14 @@ class CTF(commands.Cog, name="CTF"):
     @app_commands.describe(
         category_active="The name of the category for the next or current ctf",
         category_archived="The name of the category for the archived ctf",
-        min_role="The minimum role required to run the create_ctf command",
+        role_manager="The only role that can run the create_ctf command",
     )
     async def init(
         self,
         interaction: Interaction,
         category_active: CategoryChannel,
         category_archived: CategoryChannel,
-        min_role: Role,
+        role_manager: Role,
     ) -> None:
         """
         Initialize the CTF bot in the discord server.
@@ -206,7 +188,7 @@ class CTF(commands.Cog, name="CTF"):
             interaction (Interaction): The application command context.
             category_active (CategoryChannel): The name of the category for the next or current ctf
             category_archived (CategoryChannel): The name of the category for the archived ctf
-            min_role (Role): The minimum role required to run the create_ctf command
+            role_manager (Role): The only role that can run the create_ctf command
 
         """
         await interaction.response.defer(ephemeral=True)
@@ -223,19 +205,19 @@ class CTF(commands.Cog, name="CTF"):
 
         id_active = category_active.id
         id_archived = category_archived.id
-        min_role_id = min_role.id
+        id_role_manager = role_manager.id
         self.category_active_id = id_active
         self.category_archived_id = id_archived
-        self.min_role_id = min_role_id
+        self.role_manager_id = id_role_manager
 
-        logger.debug(f"{min_role_id=}")
+        logger.debug(f"{role_manager=}")
 
         await self.bot.database.add_server(
             ServerModel(
                 id=interaction.guild.id,
                 active_category_id=id_active,
                 archive_category_id=id_archived,
-                min_role_id=min_role_id,
+                role_manager_id=role_manager.id,
             )
         )
 
@@ -264,7 +246,7 @@ class CTF(commands.Cog, name="CTF"):
         """
         await interaction.response.defer(ephemeral=True)
 
-        if not self.category_active_id or not self.min_role_id:
+        if not self.category_active_id or not self.role_manager_id:
             res = await self.set_cat(server_id=interaction.guild.id)
             if not res:
                 await interaction.followup.send(
@@ -273,12 +255,12 @@ class CTF(commands.Cog, name="CTF"):
                 )
                 return
 
-        min_role = interaction.guild.get_role(self.min_role_id)
+        role_manager = interaction.guild.get_role(self.role_manager_id)
 
-        logger.debug(f"{min_role.position=}")
+        logger.debug(f"{role_manager.position=}")
         logger.debug(f"{interaction.user.top_role.position=}")
 
-        if interaction.user.top_role.position < min_role.position:
+        if role_manager not in interaction.user.roles:
             await interaction.followup.send(
                 "You don't have the required role to run this command. ❌",
                 ephemeral=True,
