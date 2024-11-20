@@ -1,4 +1,4 @@
-# Requirements Analysis Document (RAD)
+## Requirements Analysis Document (RAD)
 
 ## Introduction
 
@@ -16,8 +16,8 @@ This project consists of the development of a Discord bot that can automate the 
    - Given a CTF event URL on CTFTime, the bot creates a dedicated channel for the event in the previously configured “CTF Active” category.
    - The bot sends an embed message to the channel, containing detailed information about the CTF event, including title, description, start and end dates, logo, and link to the CTFTime site.
 2. **Discord event management**:
-   - The bot creates a Discord event for each CTF with start and end dates retrieved from CTFTime.
-   - At the beginning and end of the event, the bot automatically sends notifications to participants, updating the status of the event in the server.
+   - The bot creates a Discord event for each CTF with the start and end dates retrieved from CTFTime.
+   - At the start and end of the event, the bot automatically sends notifications to participants, updating the status of the event in the server.
 3. **Role Management**:
    - Creating a role associated with CTF for participants, with customizable name and permissions.
    - Automatic role assignment to members who react to the embed related to the CTF event in the dedicated channel, simplifying the joining process.
@@ -26,16 +26,16 @@ This project consists of the development of a Discord bot that can automate the 
    - When the event ends, the bot sends an alert message and automatically moves the channel to the “CTF Archived” category, organizing past events.
 5. **Configuration of categories and roles**:
    - Configuration command to define the category of active CTFs, the category of archived CTFs, and the role required to manage CTFs (based on role position).
-   - Only users with the role manager can create new CTF events.
+   - Only users with the defined role can create new CTF events.
 
 ## Non-functional requirements
 
 1. **Scalability**:
    - The bot must be able to handle multiple CTFs simultaneously on different servers, allowing for large-scale use.
 2. **Reliability**:
-   - Robust error handling during channel, event and role creation. Any problems should be reported in real time to the server administrator with appropriate error messages.
+   - Robust error handling during channel, event, and role creation. Any problems must be reported in real time to the server administrator with appropriate error messages.
 3. **Security**:
-   - Limited access to CTF management commands, configurable via roles. Only users with the correct role can execute commands for creating and managing CTFs.
+   - Restricted access to commands based on factors such as member permissions on the server (required Administrator permission on the discord server for the /init command) or the requirement of a precise role (For the /create_ctf command, it is necessary to define a manager role).
    - Secure management of data received from CTFTime to prevent possible exploits.
 4. **Maintenance and ease of configuration**:
    - Clear documentation for administrators on how to configure and use the bot.
@@ -51,9 +51,9 @@ This project consists of the development of a Discord bot that can automate the 
 - **Parameters**:
   - `category_ctf_active`: Category in which the channels of active CTFs will be placed.
   - `category_ctf_archived`: Category into which the channels of archived CTFs will be moved.
-  - `role_manager`: Role required to be able to create and manage CTFs, based on the location of roles in the server.
+  - `manager_role`: Manager role, required to be able to create CTFs on the server.
 - **Functionality**:
-  - Sets the categories and the role required for future CTF creations.
+  - Sets the categories and manager role for creating CTFs on the server.
   - If the configuration is completed correctly, the bot confirms with a message; if there is an error, it reports the problem to the user.
 
 ### Command `/create_ctf`
@@ -71,11 +71,13 @@ This project consists of the development of a Discord bot that can automate the 
 ## Flowchart of main operations
 
 1. **Configuration (`/init`)**:
-   - A user with administrator permission in any channel sends the `/init` command with the necessary parameters.
-   - The bot saves categories and the role to manage CTFs.
+   - A user with administrator permission on the server, sends the command `/init` in any channel with the necessary parameters.
+   - The bot saves the categories and role to manage the CTFs.
    - The bot confirms with a message or reports errors in case of missing parameters.
+
 2. **Create CTF Event (`/create_ctf`)**:
    - A user with the role defined in the `/init` command sends the `/create_ctf` command in any channel with the CTFTime event URL.
+   - The bot checks the user's role and whether the ctf already exists.
    - The bot verifies the URL and retrieves the event data.
    - The bot creates the channel in the “CTF Active” category.
    - The bot creates the Discord event and role for participants.
@@ -83,24 +85,24 @@ This project consists of the development of a Discord bot that can automate the 
 
 ## Use Cases
 
-### Use Case 1: Initial setup of the bot
+### Use Case 1: Initial configuration of the bot
 
-- **Actors**: Discord server administrator.
-- **Description**: The server administrator runs the `/init` command to configure basic settings for handling CTFs.
+- **Actors**: User with administrator permissions in the Discord server.
+- **Description**: The Server User runs the `/init` command to configure the basic settings for handling CTFs.
 - **Main Flow**:
-  1. The administrator runs the `/init` command specifying the categories and the role to manage CTFs.
+  1. The User runs the `/init` command specifying the categories and role to manage CTFs.
   2. The bot saves the settings and confirms the configuration.
 - **Extensions**:
   - If the `/init` command does not include all the necessary parameters, the bot sends an error message and requests the missing information.
-- **Pre-conditions**: The one sending the message must have the necessary permissions to execute the command.
+- **Pre-conditions**: The User sending the message must have the necessary permissions to run the command.
 - **Post-conditions**: The bot configuration is completed, ready for use.
 
 ### Use Case 2: Creating a CTF event
 
-- **Actors**: Administrator of the Discord server.
-- **Description**: Administrator creates a new CTF event using the `/create_ctf` command.
+- **Actors**: User with the role defined in /init in the Discord server.
+- **Description**: User creates a new CTF event using the `/create_ctf` command.
 - **Main Flow**:
-  1. The administrator sends the `/create_ctf` command with the event URL to CTFTime.
+  1. The User sends the `/create_ctf` command with the event URL on CTFTime.
   2. The bot retrieves the event information from the CTFTime API.
   3. The bot creates a channel in the “CTF Active” category and publishes an embed with the event details.
   4. The bot creates a Discord event for the CTF, defining the start and end dates.
@@ -118,25 +120,23 @@ This project consists of the development of a Discord bot that can automate the 
 - **Description**: A server member joins the CTF event by reacting to the information embed in the dedicated channel.
 - **Main stream**:
   1. The server member displays the embed with the CTF information in the channel.
-  2. The member reacts to the embed with the appropriate emoji.
+  2. The member reacts to the embed with any emoji.
   3. The bot automatically assigns the role created for the CTF to the member.
-- **Extensions**:
-  - If the member does not have the necessary permissions to access the channel or react to the embed, the bot reports the error and does not assign the role.
-- **Pre-conditions**: The CTF event must have been created and the role configured for reactions.
-- **Post-conditions**: Member gets the CTF role and full access to the dedicated channel.
+- **Pre-conditions**: The CTF must have been created by the bot.
+- **Post-conditions**: The member gets the role of the CTF.
 
 ### Use Case 4: Event Start Notification
 
-- **Actors**: Discord bot.
+- **Actors**: Discord bot
 - **Description**: When the start date of a CTF event is reached, the bot automatically sends a notification in the dedicated channel.
-- **Main Stream**:
+- **Main stream**:
   1. At the start time of the event, the bot sends a message in the CTF channel, tagging members with the associated role to inform them of the start of the event.
 - **Pre-conditions**: The CTF channel and role must have been created, and the bot must have permissions to send notifications.
-- - **Post-conditions**: Participants are notified of the start of the CTF.
+- **Post-conditions**: Participants are notified of the start of the CTF.
 
 ### Use Case 5: Conclusion and archiving of the event
 
-- **Actors**: Discord bot.
+- **Actors**: Discord Bot
 - **Description**: At the end of a CTF event, the bot notifies participants and archives the channel.
 - **Main Flow**:
   1. On the end date of the event, the bot sends a message in the CTF channel informing participants that the event has ended.
@@ -147,7 +147,7 @@ This project consists of the development of a Discord bot that can automate the 
 ### Additional considerations
 
 - **Integration API**: Ensure that the CTFTime API is accessible and manage any rate limits to avoid blockages.
-  
+
 ## Conclusion
 
-The proposed Discord bot will automate the management of CTFs, simplifying the creation and management of complex events and improving the experience of server users. Through its integration with CTFTime, the bot will provide up-to-date information on CTFs, while the automation of channels, events, and roles will make the organization efficient and professional.
+The proposed Discord bot will automate CTF management, simplifying the creation and management of complex events and improving the experience of server users. Through its integration with CTFTime, the bot will provide up-to-date information on CTFs, while the automation of channels, events, and roles will make the organization efficient and professional.
