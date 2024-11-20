@@ -29,8 +29,8 @@ Il progetto consiste nello sviluppo di un bot Discord in grado di automatizzare 
    - Quando l'evento termina, il bot invia un messaggio di avviso e sposta automaticamente il canale nella categoria "CTF Archiviate", organizzando gli eventi passati.
 
 5. **Configurazione delle categorie e dei ruoli**:
-   - Comando di configurazione per definire la categoria delle CTF attive, la categoria delle CTF archiviate e il ruolo minimo richiesto per gestire le CTF (basato sulla posizione dei ruoli).
-   - Solo gli utenti con il ruolo minimo o superiore possono creare nuovi eventi CTF.
+   - Comando di configurazione per definire la categoria delle CTF attive, la categoria delle CTF archiviate e il ruolo richiesto per gestire le CTF (basato sulla posizione dei ruoli).
+   - Solo gli utenti con il ruolo definito possono creare nuovi eventi CTF.
 
 ## Requisiti non funzionali
 
@@ -41,7 +41,7 @@ Il progetto consiste nello sviluppo di un bot Discord in grado di automatizzare 
    - Gestione robusta degli errori durante la creazione di canali, eventi e ruoli. Eventuali problemi devono essere segnalati in tempo reale all'amministratore del server con messaggi di errore appropriati.
 
 3. **Sicurezza**:
-   - Accesso limitato ai comandi di gestione delle CTF, configurabile tramite ruoli. Solo gli utenti con il ruolo minimo (o superiore) possono eseguire comandi per la creazione e gestione delle CTF.
+   - Accesso limitato ai comandi di gestione delle CTF, configurabile tramite ruoli. Solo gli utenti con il ruolo definito possono eseguire comandi per la creazione e gestione delle CTF.
    - Gestione sicura dei dati ricevuti da CTFTime per prevenire possibili exploit.
 
 4. **Manutenibilità e facilità di configurazione**:
@@ -59,9 +59,9 @@ Il progetto consiste nello sviluppo di un bot Discord in grado di automatizzare 
 - **Parametri**:
   - `categoria_ctf_attive`: Categoria in cui saranno inseriti i canali delle CTF attive.
   - `categoria_ctf_archiviate`: Categoria in cui saranno spostati i canali delle CTF archiviate.
-  - `ruolo_minimo`: Ruolo minimo richiesto per poter creare e gestire le CTF, basato sulla posizione dei ruoli nel server.
+  - `ruolo_manager`: Ruolo manager, richiesto per poter creare e gestire le CTF, basato sulla posizione dei ruoli nel server.
 - **Funzionalità**:
-  - Imposta le categorie e il ruolo minimo richiesti per le future creazioni di CTF.
+  - Imposta le categorie e il ruolo richiesti per le future creazioni di CTF.
   - Se la configurazione è completata correttamente, il bot conferma con un messaggio; in caso di errore, segnala il problema all'utente.
 
 ### Comando `/create_ctf`
@@ -80,7 +80,7 @@ Il progetto consiste nello sviluppo di un bot Discord in grado di automatizzare 
 
 1. **Configurazione (`/init`)**:
    - Un utente con il permesso amministratore in qualsiasi canale invia il comando `/init` con i parametri necessari.
-   - Il bot salva le categorie e il ruolo minimo per gestire le CTF.
+   - Il bot salva le categorie e il ruolo per gestire le CTF.
    - Il bot conferma con un messaggio o segnala errori in caso di parametri mancanti.
 
 2. **Creazione Evento CTF (`/create_ctf`)**:
@@ -97,7 +97,7 @@ Il progetto consiste nello sviluppo di un bot Discord in grado di automatizzare 
 - **Attori**: Amministratore del server Discord
 - **Descrizione**: L'amministratore del server esegue il comando `/init` per configurare le impostazioni di base per la gestione delle CTF.
 - **Flusso principale**:
-  1. L'amministratore esegue il comando `/init` specificando le categorie e il ruolo minimo per gestire le CTF.
+  1. L'amministratore esegue il comando `/init` specificando le categorie e il ruolo per gestire le CTF.
   2. Il bot salva le impostazioni e conferma la configurazione.
 - **Estensioni**:
   - Se il comando `/init` non include tutti i parametri necessari, il bot invia un messaggio d'errore e richiede le informazioni mancanti.

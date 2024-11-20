@@ -25,8 +25,8 @@ This project consists of the development of a Discord bot that can automate the 
    - When the event starts, the bot automatically tags members with the associated role in the CTF channel, sending a start message.
    - When the event ends, the bot sends an alert message and automatically moves the channel to the “CTF Archived” category, organizing past events.
 5. **Configuration of categories and roles**:
-   - Configuration command to define the category of active CTFs, the category of archived CTFs, and the minimum role required to manage CTFs (based on role position).
-   - Only users with the minimum role or higher can create new CTF events.
+   - Configuration command to define the category of active CTFs, the category of archived CTFs, and the role required to manage CTFs (based on role position).
+   - Only users with the role manager can create new CTF events.
 
 ## Non-functional requirements
 
@@ -35,7 +35,7 @@ This project consists of the development of a Discord bot that can automate the 
 2. **Reliability**:
    - Robust error handling during channel, event and role creation. Any problems should be reported in real time to the server administrator with appropriate error messages.
 3. **Security**:
-   - Limited access to CTF management commands, configurable via roles. Only users with the minimum role (or higher) can execute commands for creating and managing CTFs.
+   - Limited access to CTF management commands, configurable via roles. Only users with the correct role can execute commands for creating and managing CTFs.
    - Secure management of data received from CTFTime to prevent possible exploits.
 4. **Maintenance and ease of configuration**:
    - Clear documentation for administrators on how to configure and use the bot.
@@ -51,9 +51,9 @@ This project consists of the development of a Discord bot that can automate the 
 - **Parameters**:
   - `category_ctf_active`: Category in which the channels of active CTFs will be placed.
   - `category_ctf_archived`: Category into which the channels of archived CTFs will be moved.
-  - `minimum_role`: Minimum role required to be able to create and manage CTFs, based on the location of roles in the server.
+  - `role_manager`: Role required to be able to create and manage CTFs, based on the location of roles in the server.
 - **Functionality**:
-  - Sets the categories and minimum role required for future CTF creations.
+  - Sets the categories and the role required for future CTF creations.
   - If the configuration is completed correctly, the bot confirms with a message; if there is an error, it reports the problem to the user.
 
 ### Command `/create_ctf`
@@ -72,10 +72,10 @@ This project consists of the development of a Discord bot that can automate the 
 
 1. **Configuration (`/init`)**:
    - A user with administrator permission in any channel sends the `/init` command with the necessary parameters.
-   - The bot saves categories and minimum role to manage CTFs.
+   - The bot saves categories and the role to manage CTFs.
    - The bot confirms with a message or reports errors in case of missing parameters.
 2. **Create CTF Event (`/create_ctf`)**:
-   - A user with the minimum permissions defined in the `/init` command sends the `/create_ctf` command in any channel with the CTFTime event URL.
+   - A user with the role defined in the `/init` command sends the `/create_ctf` command in any channel with the CTFTime event URL.
    - The bot verifies the URL and retrieves the event data.
    - The bot creates the channel in the “CTF Active” category.
    - The bot creates the Discord event and role for participants.
@@ -88,7 +88,7 @@ This project consists of the development of a Discord bot that can automate the 
 - **Actors**: Discord server administrator.
 - **Description**: The server administrator runs the `/init` command to configure basic settings for handling CTFs.
 - **Main Flow**:
-  1. The administrator runs the `/init` command specifying the categories and minimum role to manage CTFs.
+  1. The administrator runs the `/init` command specifying the categories and the role to manage CTFs.
   2. The bot saves the settings and confirms the configuration.
 - **Extensions**:
   - If the `/init` command does not include all the necessary parameters, the bot sends an error message and requests the missing information.
