@@ -21,4 +21,4 @@ class ServerModel:
     id: int
     active_category_id: int
     archive_category_id: int
-    min_role_id: int
+    role_manager_id: int
