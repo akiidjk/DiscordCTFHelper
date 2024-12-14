@@ -1,6 +1,19 @@
 from datetime import UTC, datetime
 
-from discord import CategoryChannel, Color, Embed, EntityType, Interaction, Message, PrivacyLevel, Role, TextChannel, app_commands
+from discord import (
+    CategoryChannel,
+    Color,
+    Embed,
+    EntityType,
+    Interaction,
+    Member,
+    Message,
+    PrivacyLevel,
+    Role,
+    ScheduledEvent,
+    TextChannel,
+    app_commands,
+)
 from discord.errors import HTTPException
 from discord.ext import commands
 
@@ -14,9 +27,15 @@ MAX_DESC_LENGTH = 997
 class CTF(commands.Cog, name="CTF"):
     def __init__(self, bot) -> None:
         self.bot = bot
-        self.category_active_id = None
-        self.category_archived_id = None
-        self.role_manager_id = None
+        self.category_active_id: int | None = None
+        self.category_archived_id: int | None = None
+        self.role_manager_id: int | None = None
+
+    async def send_error(self, interaction: Interaction, function: str) -> None:
+        await interaction.followup.send(
+            f"Failed to get the {function}. ❌",
+            ephemeral=True,
+        )
 
     async def create_events(
         self,
@@ -25,7 +44,7 @@ class CTF(commands.Cog, name="CTF"):
         event_description: str,
         start_time: datetime,
         end_time: datetime,
-    ) -> None:
+    ) -> ScheduledEvent | None:
         """
         Create a scheduled event in the discord server.
 
@@ -36,8 +55,16 @@ class CTF(commands.Cog, name="CTF"):
             start_time (datetime): The start time of the event.
             end_time (datetime): The end time of the event.
 
+        Returns:
+            Optional[ScheduledEvent]: The created scheduled event or None if failed
+
         """
         guild = interaction.guild
+
+        if guild is None:
+            await self.send_error(interaction, "event")
+            return None
+
         image_logo = await get_logo(info["logo"])
 
         try:
@@ -61,57 +88,61 @@ class CTF(commands.Cog, name="CTF"):
                     event_description=event_description,
                     start_time=start_time,
                     end_time=end_time,
-                    logo=None,
                 )
 
             await interaction.followup.send(
                 f"Failed to create the event. ❌\n Error: {e}",
                 ephemeral=True,
             )
-
             return None
+
         return scheduled_event
 
-    async def set_cat(self, server_id) -> bool:
+    async def set_cat(self, server_id: int) -> bool:
         try:
             server = await self.bot.database.get_server_by_id(server_id)
             logger.debug(f"{server=}")
-            self.category_active_id = server.active_category_id
-            self.category_archived_id = server.archive_category_id
-            self.role_manager_id = server.role_manager_id
-        except HTTPException as e:
+            if server:
+                self.category_active_id = server.active_category_id
+                self.category_archived_id = server.archive_category_id
+                self.role_manager_id = server.role_manager_id
+                return True
+        except (HTTPException, AttributeError) as e:
             logger.error(f"Error: {e}")
-            return False
-        except AttributeError as e:
-            logger.error(f"Error: {e}")
-            return False
-        else:
-            return True
+        return False
 
     async def create_channel(
-        self,
-        interaction: Interaction,
-        channel_name: str,
-        category_id: int,
-    ) -> TextChannel:
-        guild = interaction.guild
-        category = interaction.guild.get_channel(category_id)
-        logger.debug(f"{category=}")
-        try:
-            channel = await guild.create_text_channel(
-                name=channel_name,
-                category=category,
-            )
-            overwrites = category.overwrites
-            await channel.edit(overwrites=overwrites)
-        except HTTPException as e:
-            logger.error(f"Error: {e}")
-            await interaction.followup.send(
-                f"Failed to create the channel or assign the permission. ❌\n Error: {e}",
-                ephemeral=True,
-            )
-            return None
-        return channel
+            self,
+            interaction: Interaction,
+            channel_name: str,
+            category_id: int,
+        ) -> TextChannel | None:
+            guild = interaction.guild
+            if guild is None:
+                await self.send_error(interaction, "channel")
+                return None
+
+            category = guild.get_channel(category_id)
+            if not isinstance(category, CategoryChannel):
+                await self.send_error(interaction, "category")
+                return None
+
+            try:
+                channel = await guild.create_text_channel(
+                    name=channel_name,
+                    category=category,
+                )
+                overwrites = category.overwrites
+                await channel.edit(overwrites=overwrites)
+            except HTTPException as e:
+                logger.error(f"Error: {e}")
+                await interaction.followup.send(
+                    f"Failed to create the channel or assign the permission. ❌\n Error: {e}",
+                    ephemeral=True,
+                )
+                return None
+            else:
+                return channel
 
     async def create_embed(self, data: dict, start_time: datetime, end_time: datetime, channel: TextChannel) -> Message:
         description = f"""
@@ -145,25 +176,23 @@ class CTF(commands.Cog, name="CTF"):
         )
 
         msg = await channel.send(embed=embed)
-
         await msg.add_reaction("✅")
-
         return msg
 
-    async def create_role(self, interaction: Interaction, name: str) -> Role:
-        color = Color.random()
+    async def create_role(self, interaction: Interaction, name: str) -> Role | None:
+        if interaction.guild is None:
+            return None
 
+        color = Color.random()
         while color == Color.light_gray():
-            color = color.random()
+            color = Color.random()
 
         return await interaction.guild.create_role(
             name=name,
-            color=Color.random(),
+            color=color,
             mentionable=True,
             hoist=True,
         )
-
-    # * -----------------------------------------------------------------------
 
     @app_commands.command(
         name="init",
@@ -181,52 +210,41 @@ class CTF(commands.Cog, name="CTF"):
         category_archived: CategoryChannel,
         role_manager: Role,
     ) -> None:
-        """
-        Initialize the CTF bot in the discord server.
-
-        Args:
-            interaction (Interaction): The application command context.
-            category_active (CategoryChannel): The name of the category for the next or current ctf
-            category_archived (CategoryChannel): The name of the category for the archived ctf
-            role_manager (Role): The only role that can run the create_ctf command
-
-        """
         await interaction.response.defer(ephemeral=True)
 
-        if not interaction.user.guild_permissions.administrator:
+        if not isinstance(interaction.user, Member) or not interaction.user.guild_permissions.administrator:
             await interaction.followup.send(
                 "You need to be the admin of the server to run this command. ❌",
                 ephemeral=True,
             )
             return
 
+        if interaction.guild is None:
+            await self.send_error(interaction, "guild")
+            return
+
         if await self.bot.database.get_server_by_id(interaction.guild.id):
             await self.bot.database.delete_server(interaction.guild.id)
 
-        id_active = category_active.id
-        id_archived = category_archived.id
-        id_role_manager = role_manager.id
-        self.category_active_id = id_active
-        self.category_archived_id = id_archived
-        self.role_manager_id = id_role_manager
+        self.category_active_id = category_active.id
+        self.category_archived_id = category_archived.id
+        self.role_manager_id = role_manager.id
 
         logger.debug(f"{role_manager=}")
 
         await self.bot.database.add_server(
             ServerModel(
                 id=interaction.guild.id,
-                active_category_id=id_active,
-                archive_category_id=id_archived,
+                active_category_id=category_active.id,
+                archive_category_id=category_archived.id,
                 role_manager_id=role_manager.id,
             )
         )
 
         await interaction.followup.send(
-            content=f"Successfully set the category for the active CTF to {category_active.name} and the category for the archived CTF to {category_archived.name}! ✅",  # noqa: E501
+            content=f"Successfully set the category for the active CTF to {category_active.name} and the category for the archived CTF to {category_archived.name}! ✅",
             ephemeral=True,
         )
-
-    # * -----------------------------------------------------------------------
 
     @app_commands.command(
         name="create_ctf",
@@ -236,18 +254,10 @@ class CTF(commands.Cog, name="CTF"):
         url="The URL of the event",
     )
     async def create_ctf(self, interaction: Interaction, url: str) -> None:
-        """
-        Create a CTF event in the discord server.
-
-        Args:
-            interaction (Interaction): The application command context.
-            url (str): The URL of the event
-
-        """
         await interaction.response.defer(ephemeral=True)
 
         if not self.category_active_id or not self.role_manager_id:
-            res = await self.set_cat(server_id=interaction.guild.id)
+            res = await self.set_cat(server_id=interaction.guild.id if interaction.guild else 0)
             if not res:
                 await interaction.followup.send(
                     "Failed to set the category. ❌ Please check the configuration or contact support.",
@@ -255,21 +265,19 @@ class CTF(commands.Cog, name="CTF"):
                 )
                 return
 
+        if not interaction.guild:
+            await self.send_error(interaction, "guild")
+            return
+
         role_manager = interaction.guild.get_role(self.role_manager_id)
-
-        logger.debug(f"{role_manager.position=}")
-        logger.debug(f"{interaction.user.top_role.position=}")
-
-        if role_manager not in interaction.user.roles:
+        if not isinstance(interaction.user, Member) or not role_manager or role_manager not in interaction.user.roles:
             await interaction.followup.send(
                 "You don't have the required role to run this command. ❌",
                 ephemeral=True,
             )
             return
 
-        result = check_url(url)
-
-        if not result:
+        if not check_url(url):
             await interaction.followup.send(
                 "The URL is not valid. ❌ (The url must be in the format https://ctftime.org/event/<id>)",
                 ephemeral=True,
@@ -277,7 +285,6 @@ class CTF(commands.Cog, name="CTF"):
             return
 
         data = await get_ctf_info(url)
-
         if not data:
             await interaction.followup.send(
                 "Failed to get the information of the CTF. ❌",
@@ -298,17 +305,14 @@ class CTF(commands.Cog, name="CTF"):
             )
             return
 
-        logger.debug(f"{self.category_active_id=}")
-
-        logger.debug(f"{self.category_active_id=}")
-
         channel = await self.create_channel(
             interaction=interaction,
             channel_name=data["title"],
             category_id=self.category_active_id,
         )
 
-        logger.debug(f"{channel=}")
+        if not channel:
+            return
 
         msg = await self.create_embed(
             data=data,
@@ -319,9 +323,6 @@ class CTF(commands.Cog, name="CTF"):
 
         description = str(data["description"])[:MAX_DESC_LENGTH] + "..." if len(data["description"]) >= MAX_DESC_LENGTH else data["description"]
 
-        logger.debug(f"{data['logo']=}")
-        logger.debug(f"{data['logo'] != ''=}")
-
         events = await self.create_events(
             interaction=interaction,
             info=data,
@@ -330,12 +331,16 @@ class CTF(commands.Cog, name="CTF"):
             end_time=end_time,
         )
 
+        if not events:
+            return
+
         role = await self.create_role(
             interaction=interaction,
             name=data["title"],
         )
 
-        logger.debug(f"{msg.id=}")
+        if not role:
+            return
 
         ctf = CTFModel(
             server_id=interaction.guild.id,
@@ -347,11 +352,8 @@ class CTF(commands.Cog, name="CTF"):
             msg_id=msg.id,
         )
 
-        logger.debug(f"{ctf=}")
-
         await self.bot.database.add_ctf(ctf)
-
-        await interaction.followup.send("Ctf created in the discord server ✅", ephemeral=True)
+        await interaction.followup.send("CTF created in the discord server ✅", ephemeral=True)
 
 
 async def setup(bot) -> None:
