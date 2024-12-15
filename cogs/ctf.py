@@ -27,9 +27,9 @@ MAX_DESC_LENGTH = 997
 class CTF(commands.Cog, name="CTF"):
     def __init__(self, bot) -> None:
         self.bot = bot
-        self.category_active_id: int | None = None
-        self.category_archived_id: int | None = None
-        self.role_manager_id: int | None = None
+        self.category_active_id: dict[int, int] = {}
+        self.category_archived_id: dict[int, int] = {}
+        self.role_manager_id: dict[int, int] = {}
 
     async def send_error(self, interaction: Interaction, function: str) -> None:
         await interaction.followup.send(
@@ -103,46 +103,46 @@ class CTF(commands.Cog, name="CTF"):
             server = await self.bot.database.get_server_by_id(server_id)
             logger.debug(f"{server=}")
             if server:
-                self.category_active_id = server.active_category_id
-                self.category_archived_id = server.archive_category_id
-                self.role_manager_id = server.role_manager_id
+                self.category_active_id[server_id] = server.active_category_id
+                self.category_archived_id[server_id] = server.archive_category_id
+                self.role_manager_id[server_id] = server.role_manager_id
                 return True
         except (HTTPException, AttributeError) as e:
             logger.error(f"Error: {e}")
         return False
 
     async def create_channel(
-            self,
-            interaction: Interaction,
-            channel_name: str,
-            category_id: int,
-        ) -> TextChannel | None:
-            guild = interaction.guild
-            if guild is None:
-                await self.send_error(interaction, "channel")
-                return None
+        self,
+        interaction: Interaction,
+        channel_name: str,
+        category_id: int,
+    ) -> TextChannel | None:
+        guild = interaction.guild
+        if guild is None:
+            await self.send_error(interaction, "channel")
+            return None
 
-            category = guild.get_channel(category_id)
-            if not isinstance(category, CategoryChannel):
-                await self.send_error(interaction, "category")
-                return None
+        category = guild.get_channel(category_id)
+        if not isinstance(category, CategoryChannel):
+            await self.send_error(interaction, "category")
+            return None
 
-            try:
-                channel = await guild.create_text_channel(
-                    name=channel_name,
-                    category=category,
-                )
-                overwrites = category.overwrites
-                await channel.edit(overwrites=overwrites)
-            except HTTPException as e:
-                logger.error(f"Error: {e}")
-                await interaction.followup.send(
-                    f"Failed to create the channel or assign the permission. ❌\n Error: {e}",
-                    ephemeral=True,
-                )
-                return None
-            else:
-                return channel
+        try:
+            channel = await guild.create_text_channel(
+                name=channel_name,
+                category=category,
+            )
+            overwrites = category.overwrites
+            await channel.edit(overwrites=overwrites)
+        except HTTPException as e:
+            logger.error(f"Error: {e}")
+            await interaction.followup.send(
+                f"Failed to create the channel or assign the permission. ❌\n Error: {e}",
+                ephemeral=True,
+            )
+            return None
+        else:
+            return channel
 
     async def create_embed(self, data: dict, start_time: datetime, end_time: datetime, channel: TextChannel) -> Message:
         description = f"""
@@ -226,9 +226,9 @@ class CTF(commands.Cog, name="CTF"):
         if await self.bot.database.get_server_by_id(interaction.guild.id):
             await self.bot.database.delete_server(interaction.guild.id)
 
-        self.category_active_id = category_active.id
-        self.category_archived_id = category_archived.id
-        self.role_manager_id = role_manager.id
+        self.category_active_id[interaction.guild.id] = category_active.id
+        self.category_archived_id[interaction.guild.id] = category_archived.id
+        self.role_manager_id[interaction.guild.id] = role_manager.id
 
         logger.debug(f"{role_manager=}")
 
@@ -256,7 +256,16 @@ class CTF(commands.Cog, name="CTF"):
     async def create_ctf(self, interaction: Interaction, url: str) -> None:
         await interaction.response.defer(ephemeral=True)
 
-        if not self.category_active_id or not self.role_manager_id:
+        if interaction.guild.id not in self.category_active_id:
+            res = await self.set_cat(server_id=interaction.guild.id if interaction.guild else 0)
+            if not res:
+                await interaction.followup.send(
+                    "Failed to set the category the server is not configure. ❌ Please check the configuration or contact support.",
+                    ephemeral=True,
+                )
+                return
+
+        if not self.category_active_id[interaction.guild.id] or not self.role_manager_id[interaction.guild.id]:
             res = await self.set_cat(server_id=interaction.guild.id if interaction.guild else 0)
             if not res:
                 await interaction.followup.send(
@@ -269,7 +278,7 @@ class CTF(commands.Cog, name="CTF"):
             await self.send_error(interaction, "guild")
             return
 
-        role_manager = interaction.guild.get_role(self.role_manager_id)
+        role_manager = interaction.guild.get_role(self.role_manager_id[interaction.guild.id])
         if not isinstance(interaction.user, Member) or not role_manager or role_manager not in interaction.user.roles:
             await interaction.followup.send(
                 "You don't have the required role to run this command. ❌",
@@ -308,7 +317,7 @@ class CTF(commands.Cog, name="CTF"):
         channel = await self.create_channel(
             interaction=interaction,
             channel_name=data["title"],
-            category_id=self.category_active_id,
+            category_id=self.category_active_id[interaction.guild.id],
         )
 
         if not channel:
