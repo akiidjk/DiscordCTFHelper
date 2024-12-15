@@ -24,4 +24,4 @@ COPY --from=builder /usr/local/bin /usr/local/bin
 
 COPY . .
 
-CMD ["python3", "bot.py"]
+CMD ["python3", "bot.py", "INFO"]
