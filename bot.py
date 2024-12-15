@@ -1,6 +1,8 @@
+import logging
 import os
 import platform
 import random
+import sys
 from pathlib import Path
 
 import aiofiles
@@ -12,9 +14,18 @@ from discord.ext.commands import Context
 from dotenv import load_dotenv
 
 from database import DatabaseManager
-from lib.logger import logger
+from lib.logger import init_logger, logger
 
 intents = discord.Intents.all()
+
+
+levels = {
+    "DEBUG": logging.DEBUG,
+    "INFO": logging.INFO,
+    "WARNING": logging.WARNING,
+    "ERROR": logging.ERROR,
+    "CRITICAL": logging.CRITICAL,
+}
 
 
 class DiscordBot(commands.Bot):
@@ -248,11 +259,17 @@ class DiscordBot(commands.Bot):
             logger.info(f"Role not found for CTF {ctf.name}")
 
 
-load_dotenv()
+if __name__ == "__main__":
+    load_dotenv()
 
-bot = DiscordBot()
-TOKEN = os.getenv("TOKEN")
-if TOKEN is None:
-    message = "Please provide a token in the .env file"
-    raise ValueError(message)
-bot.run(TOKEN)
+    if len(sys.argv) != 2 or sys.argv[1] not in levels:
+        message = "Please provide a valid logging level: DEBUG, INFO, WARNING, ERROR, CRITICAL"
+        raise ValueError(message)
+
+    init_logger(level=levels[sys.argv[1]])
+    bot = DiscordBot()
+    TOKEN = os.getenv("TOKEN")
+    if TOKEN is None:
+        message = "Please provide a token in the .env file"
+        raise ValueError(message)
+    bot.run(TOKEN)

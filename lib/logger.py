@@ -1,6 +1,8 @@
 import logging
 from typing import ClassVar
 
+logger = logging.getLogger("discord_bot")
+
 
 class LoggingFormatter(logging.Formatter):
     # Colors
@@ -32,17 +34,17 @@ class LoggingFormatter(logging.Formatter):
         return formatter.format(record)
 
 
-logger = logging.getLogger("discord_bot")
-logger.setLevel(logging.DEBUG)
+def init_logger(level: int):
+    logger.setLevel(level)
 
-# Console handler
-console_handler = logging.StreamHandler()
-console_handler.setFormatter(LoggingFormatter())
-# File handler
-file_handler = logging.FileHandler(filename="discord.log", encoding="utf-8", mode="w")
-file_handler_formatter = logging.Formatter("[{asctime}] [{levelname:<8}] {name}: {message}", "%Y-%m-%d %H:%M:%S", style="{")
-file_handler.setFormatter(file_handler_formatter)
+    # Console handler
+    console_handler = logging.StreamHandler()
+    console_handler.setFormatter(LoggingFormatter())
+    # File handler
+    file_handler = logging.FileHandler(filename="discord.log", encoding="utf-8", mode="w")
+    file_handler_formatter = logging.Formatter("[{asctime}] [{levelname:<8}] {name}: {message}", "%Y-%m-%d %H:%M:%S", style="{")
+    file_handler.setFormatter(file_handler_formatter)
 
-# Add the handlers
-logger.addHandler(console_handler)
-logger.addHandler(file_handler)
+    # Add the handlers
+    logger.addHandler(console_handler)
+    logger.addHandler(file_handler)
