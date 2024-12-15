@@ -83,6 +83,7 @@ class General(commands.Cog, name="general"):
                 description="Thank you for your feedback, the owners have been notified about it.",
                 color=0xBEBEFE,
             )
+            ,ephemeral=True
         )
 
         app_owner = (await self.bot.application_info()).owner
