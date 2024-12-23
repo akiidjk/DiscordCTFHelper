@@ -209,7 +209,7 @@ class DiscordBot(commands.Bot):
             if server and isinstance(channel, TextChannel):
                 archive_category = after.guild.get_channel(server.archive_category_id)
                 if isinstance(archive_category, CategoryChannel):
-                    await channel.edit(category=archive_category)
+                    await channel.edit(category=archive_category,position=0)
 
                 if role:
                     await role.edit(color=discord.Color.light_gray(), hoist=False, mentionable=False)
