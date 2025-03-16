@@ -24,7 +24,7 @@ from lib.utils import check_url, get_ctf_info, get_logo, sanitize_input
 MAX_DESC_LENGTH = 997
 
 
-class CTF(commands.Cog, name="CTF"):
+class CTF(commands.Cog, name="ctftime"):
     def __init__(self, bot) -> None:
         self.bot = bot
         self.category_active_id: dict[int, int] = {}
@@ -252,9 +252,18 @@ class CTF(commands.Cog, name="CTF"):
     )
     @app_commands.describe(
         url="The URL of the event",
+        ctfd="The ctf is hosted using CTFd (this add some features)",
+        team_name="The name of the team (is need if ctfd is True)",
     )
-    async def create_ctf(self, interaction: Interaction, url: str) -> None:
+    async def create_ctf(self, interaction: Interaction, url: str, ctfd: bool = False, team_name: str = "") -> None:
         await interaction.response.defer(ephemeral=True)
+
+        if ctfd and not team_name:
+            await interaction.followup.send(
+                "Team name is required when using CTFd. ❌",
+                ephemeral=True,
+            )
+            return
 
         if interaction.guild.id not in self.category_active_id:
             res = await self.set_cat(server_id=interaction.guild.id if interaction.guild else 0)
@@ -359,6 +368,9 @@ class CTF(commands.Cog, name="CTF"):
             event_id=events.id,
             role_id=role.id,
             msg_id=msg.id,
+            ctftime_url=url,
+            ctfd=ctfd,
+            team_name=team_name,
         )
 
         await self.bot.database.add_ctf(ctf)
