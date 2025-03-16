@@ -12,6 +12,9 @@ class CTFModel:
     event_id: int
     role_id: int
     msg_id: int
+    ctftime_url: str
+    ctfd: bool
+    team_name: str
 
 
 @dataclass(frozen=True)

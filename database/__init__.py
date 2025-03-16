@@ -13,7 +13,7 @@ class DatabaseManager:
         Add a CTF to the database.
         """
         await self.connection.execute(
-            "INSERT INTO ctf (server_id,name, description, text_channel_id, event_id, role_id, msg_id) VALUES (?,?, ?, ?, ?, ?,?)",
+            "INSERT INTO ctf (server_id,name, description, text_channel_id, event_id, role_id, msg_id, ctfd, ctftime_url, team_name) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
             (
                 ctf.server_id,
                 ctf.name,
@@ -22,6 +22,9 @@ class DatabaseManager:
                 ctf.event_id,
                 ctf.role_id,
                 ctf.msg_id,
+                ctf.ctfd,
+                ctf.ctftime_url,
+                ctf.team_name,
             ),
         )
         await self.connection.commit()
@@ -60,6 +63,9 @@ class DatabaseManager:
                 event_id=row[5],
                 role_id=row[6],
                 msg_id=row[7],
+                ctftime_url=row[8],
+                ctfd=row[9],
+                team_name=row[10],
             )
 
     async def get_ctf_by_message_id(self, message_id: int, server_id: int) -> CTFModel:
@@ -85,6 +91,7 @@ class DatabaseManager:
             logger.debug(f"{row=}")
             if row is None:
                 return None
+
             return CTFModel(
                 server_id=row[1],
                 name=row[2],
@@ -93,6 +100,9 @@ class DatabaseManager:
                 event_id=row[5],
                 role_id=row[6],
                 msg_id=row[7],
+                ctftime_url=row[8],
+                ctfd=row[9],
+                team_name=row[10],
             )
 
     async def is_ctf_present(self, name: str, server_id: int) -> bool:
