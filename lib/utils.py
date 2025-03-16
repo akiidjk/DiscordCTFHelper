@@ -1,6 +1,7 @@
 import io
 import random
 import re
+from collections import defaultdict
 from pathlib import Path
 
 import aiofiles
@@ -86,7 +87,7 @@ async def get_ctf_info(url: str) -> dict | None:
 
     """
     if url.endswith("/"):
-        url = url[:-1]
+        url = url.removesuffix("/")
     id_event = url.split("/")[-1]
     logger.debug(f"Getting information for event with ID {id_event}")
     logger.debug(f"GET {BASE_URL}/events/{id_event}/")
@@ -118,3 +119,74 @@ def sanitize_input(inp: str) -> str:
     """
     inp = inp.strip()
     return re.sub(r"[^a-zA-Z0-9-_|\s]", "", inp)
+
+
+def normalize_url_ctf(url: str) -> str:
+    """
+    Normalize the URL of a CTF.
+
+    Args:
+        url (str): The URL to normalize.
+
+    Returns:
+        str: The normalized URL.
+
+    """
+    if url.endswith("/"):
+        url = url.removesuffix("/")
+
+    url_without_protocol = url.removeprefix("http://").removeprefix("https://")
+    if "/" in url_without_protocol:
+        url_without_protocol = url_without_protocol.split("/")[0]
+    return url.split("://")[0] + "://" + url_without_protocol
+
+
+def get_categories(solves: list[dict]) -> list[str]:
+    """
+    Get all unique categories from the solves.
+
+    Args:
+        solves (list[dict]): The list of solves.
+
+    Returns:
+        list[str]: A list of unique categories.
+
+    """
+    return list({solve["challenge"]["category"] for solve in solves})
+
+
+def create_description(team_name: str, team_data: dict, solves: dict) -> str:
+    """
+    Create a formatted description with team statistics and solve details.
+
+    Args:
+        team_name (str): The name of the team.
+        team_data (dict): Team information (score, place, members).
+        solves (dict): Dictionary containing solve data.
+
+    Returns:
+        str: The formatted description.
+
+    """
+    solve_list = solves["data"]
+    categories = get_categories(solve_list)
+
+    # Conta i solve per categoria in modo efficiente
+    category_solve_counts = defaultdict(int)
+    for solve in solve_list:
+        category_solve_counts[solve["challenge"]["category"]] += 1
+
+    category_details = "\n".join(f"- {category}: {count} solves" for category, count in category_solve_counts.items())
+
+    return f"""
+## Final statistics for {team_name}:
+
+- Score: {team_data["score"]}
+- Place: {team_data["place"]}
+- Number of members: {len(team_data["members"])}
+
+## Team solves:
+- Total solves: {solves["meta"]["count"]}
+
+{category_details}
+"""
