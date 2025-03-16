@@ -82,8 +82,8 @@ class General(commands.Cog, name="general"):
             embed=discord.Embed(
                 description="Thank you for your feedback, the owners have been notified about it.",
                 color=0xBEBEFE,
-            )
-            ,ephemeral=True
+            ),
+            ephemeral=True,
         )
 
         app_owner = (await self.bot.application_info()).owner
