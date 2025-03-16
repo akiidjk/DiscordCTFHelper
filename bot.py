@@ -1,20 +1,30 @@
+import json
 import logging
 import os
 import platform
 import random
 import sys
+from datetime import UTC, datetime
 from pathlib import Path
 
 import aiofiles
 import aiosqlite
 import discord
-from discord import CategoryChannel, EventStatus, ScheduledEvent, TextChannel
+from discord import (
+    CategoryChannel,
+    Embed,
+    EventStatus,
+    ScheduledEvent,
+    TextChannel,
+)
 from discord.ext import commands, tasks
 from discord.ext.commands import Context
 from dotenv import load_dotenv
 
 from database import DatabaseManager
+from lib.ctfd import CTFd, CTFdNotifier
 from lib.logger import init_logger, logger
+from lib.utils import create_description, get_ctf_info
 
 intents = discord.Intents.all()
 
@@ -37,6 +47,7 @@ class DiscordBot(commands.Bot):
         )
         self.logger = logger
         self.database: DatabaseManager | None = None
+        self.observer: CTFdNotifier | None = None
 
     async def init_db(self) -> None:
         db_path = Path(__file__).parent / "database" / "database.db"
@@ -184,24 +195,38 @@ class DiscordBot(commands.Bot):
         if not self.database or not after.guild:
             return
 
+        ctf = await self.database.get_ctf_by_name(after.name, after.guild.id)
+
+        if ctf is None:
+            logger.info(f"CTF {after.name=} not found in database")
+            return
+
+        ctfd = False
+        if ctf.ctfd:
+            ctftime_data = await get_ctf_info(ctf.ctftime_url)
+            if ctftime_data:
+                url_ctf = ctftime_data["url"]
+                ctfd = CTFd(url_ctf)
+
         if before.status != after.status and after.status == EventStatus.active:
-            ctf = await self.database.get_ctf_by_name(after.name, after.guild.id)
-
-            if ctf is None:
-                logger.info(f"CTF {after.name=} not found in database")
-                return
-
             channel = self.get_channel(ctf.text_channel_id)
             if isinstance(channel, TextChannel):
                 await channel.send(f"<@&{ctf.role_id}> The CTF has started! Good luck to all participants! :tada:")
 
+            if ctfd:
+                username, email, password = "bot", "bot@bot.com", "bot"
+                result = ctfd.register(username, email, password)
+                if result and isinstance(channel, TextChannel):
+                    await channel.send(f"Bot registered in the CTFd instance with username: {username}, email: {email}, password: {password}.")
+
+                    team_id = ctfd.get_team_id_by_name(ctf.team_name)
+                    if team_id is not None:
+                        ctfd.login(username, password)
+                        self.observer = CTFdNotifier(ctfd, team_id, channel)
+                    else:
+                        logger.error(f"Team {ctf.team_name} not found in the CTFd instance.")
+
         if before.status != after.status and after.status == EventStatus.completed:
-            ctf = await self.database.get_ctf_by_name(after.name, after.guild.id)
-
-            if ctf is None:
-                logger.info(f"CTF {after.name} not found in database")
-                return
-
             channel = self.get_channel(ctf.text_channel_id)
             role = after.guild.get_role(ctf.role_id)
             server = await self.database.get_server_by_id(after.guild.id)
@@ -209,12 +234,32 @@ class DiscordBot(commands.Bot):
             if server and isinstance(channel, TextChannel):
                 archive_category = after.guild.get_channel(server.archive_category_id)
                 if isinstance(archive_category, CategoryChannel):
-                    await channel.edit(category=archive_category,position=0)
+                    await channel.edit(category=archive_category, position=0)
 
                 if role:
                     await role.edit(color=discord.Color.light_gray(), hoist=False, mentionable=False)
 
                 await channel.send(f"<@&{ctf.role_id}> The CTF **{ctf.name}** has ended! The channel has been moved to the archived category.")
+
+                if ctfd:
+                    if self.observer:
+                        self.observer.stop_thread()
+
+                    username, password = "bot", "bot"
+                    ctfd.login(username, password)
+                    team_id = ctfd.get_team_id_by_name(ctf.team_name)
+                    if team_id:
+                        team_data = ctfd.get_team(team_id) if team_id else None
+                        solves = ctfd.get_team_solves(team_id) if team_id else None
+                        description = create_description(ctf.team_name, team_data["data"], solves)
+                        embed = Embed(
+                            title=f"Team stats for {ctf.team_name}", description=description, timestamp=datetime.now(tz=UTC), color=0xBEBEFE
+                        )
+                        await channel.send(embed=embed)
+
+                    else:
+                        logger.error(f"Team {ctf.team_name} not found in the CTFd instance")
+                        return
 
     async def on_reaction_add(self, reaction: discord.Reaction, user: discord.Member) -> None:
         """Handle adding reactions to messages."""
@@ -259,6 +304,29 @@ class DiscordBot(commands.Bot):
             logger.info(f"Role not found for CTF {ctf.name}")
 
 
+def test(bot: DiscordBot):
+    # ctf_url = "https://ctf.k1nd4sus.it"
+    ctf_url = "http://localhost"
+    ctfd = CTFd(ctf_url)
+    username, email, password = "ByteTheCookies", "byte@the.cookies", "3GhXJe6L2bnlp$Kc&iTB"
+    ctfd.register(username, email, password)
+    ctfd.login(username, password)
+    team_id = ctfd.get_team_id_by_name("a")
+    logger.debug(f"Team ID: {team_id}")
+
+    with open("scoreboard.json", "w") as f:
+        json.dump(ctfd.get_scoreboard(), f, indent=4)
+
+    with open("solves.json", "w") as f:
+        json.dump(ctfd.get_team_solves(team_id), f, indent=4)
+
+    with open("team.json", "w") as f:
+        json.dump(ctfd.get_team(team_id), f, indent=4)
+
+    description = create_description("ByteTheCookies", ctfd.get_team(team_id)["data"], ctfd.get_team_solves(team_id))
+    print(description)
+
+
 if __name__ == "__main__":
     load_dotenv()
 
@@ -267,9 +335,11 @@ if __name__ == "__main__":
         raise ValueError(message)
 
     init_logger(level=levels[sys.argv[1]])
+
     bot = DiscordBot()
     TOKEN = os.getenv("TOKEN")
     if TOKEN is None:
         message = "Please provide a token in the .env file"
         raise ValueError(message)
+
     bot.run(TOKEN)
