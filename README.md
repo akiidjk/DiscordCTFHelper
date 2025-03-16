@@ -1,8 +1,8 @@
-# DiscordCTFHelper  
+# DiscordCTFHelper
 >
-> A powerful and customizable bot to manage and organize CTF competitions on Discord.  
+> A powerful and customizable bot to manage and organize CTF competitions on Discord.
 
-## Table of Contents  
+## Table of Contents
 
 - [DiscordCTFHelper](#discordctfhelper)
   - [Table of Contents](#table-of-contents)
@@ -16,64 +16,64 @@
   - [License](#license)
   - [Contact](#contact)
 
-## About  
+## About
 
-**DiscordCTFHelper** is a Python bot built with `discord.py` designed to streamline CTF (Capture The Flag) management on Discord servers. The bot integrates with CTFTime and provides essential features for tracking events, managing participants, and sharing updates.  
+**DiscordCTFHelper** is a Python bot built with `discord.py` designed to streamline CTF (Capture The Flag) management on Discord servers. The bot integrates with CTFTime and provides essential features for tracking events, managing participants, and sharing updates.
 
-## Features  
+## Features
 
-- **Event Management**: Automatically fetch and display upcoming events from CTFTime.  
-- **Participant Management**: Track team members and roles within CTFs.  
-- **Notifications**: Send reminders for upcoming events and important milestones.  
-- **Event Archive**: Organize past event details for reference.  
-- **Customizable Status**: Display real-time bot activity.  
+- **Event Management**: Automatically fetch and display upcoming events from CTFTime.
+- **Participant Management**: Track team members and roles within CTFs.
+- **Notifications**: Send reminders for upcoming events and important milestones.
+- **Event Archive**: Organize past event details for reference.
+- **Customizable Status**: Display real-time bot activity.
 
-## Installation  
+## Installation
 
-### Prerequisites  
+### Prerequisites
 
-- Python 3.12  
-- `discord.py` (latest version)  
-- A Discord bot token (obtainable via the [Discord Developer Portal](https://discord.com/developers/applications))  
+- Python 3.12
+- `discord.py` (latest version)
+- A Discord bot token (obtainable via the [Discord Developer Portal](https://discord.com/developers/applications))
 
-### Steps  
+### Steps
 
-1. Clone this repository:  
+1. Clone this repository:
 
-   ```bash  
-   git clone https://github.com/akiidjk/DiscordCTFHelper.git  
-   cd DiscordCTFHelper  
-   ```  
+   ```bash
+   git clone https://github.com/akiidjk/DiscordCTFHelper.git
+   cd DiscordCTFHelper
+   ```
 
-2. Create a virtual environment:  
+2. Create a virtual environment:
 
-   ```bash  
-   python3.12 -m venv venv  
-   source venv/bin/activate  # On Windows: venv\Scripts\activate  
-   ```  
+   ```bash
+   python3.12 -m venv venv
+   source venv/bin/activate  # On Windows: venv\Scripts\activate
+   ```
 
-3. Install dependencies:  
+3. Install dependencies:
 
-   ```bash  
-   pip install -r requirements.txt  
-   ```  
+   ```bash
+   pip install -r requirements.txt
+   ```
 
-4. Set up your `.env` file:  
-   Create a `.env` file in the root directory and include the following variables:  
+4. Set up your `.env` file:
+   Create a `.env` file in the root directory and include the following variables:
 
-   ```env  
+   ```env
    TOKEN=<discord_token>
-   ```  
+   ```
 
-5. Run the bot:  
+5. Run the bot:
 
-   ```bash  
-   python bot.py  
-   ```  
+   ```bash
+   python bot.py
+   ```
 
-## Usage  
+## Usage
 
-- Invite the bot to your server using the generated OAuth2 link from the [Discord Developer Portal](https://discord.com/developers/applications).  
+- Invite the bot to your server using the generated OAuth2 link from the [Discord Developer Portal](https://discord.com/developers/applications).
 - A user with admin role can run the command /init for the bot setup
 - Create a ctf with /create_ctf
 
@@ -82,10 +82,15 @@
 - [Rad EN](/docs/RAD_en.pdf)
 - [Rad IT](/docs/RAD_it.pdf)
 
-## License  
+## License
 
-This project is licensed under the Apache License. See the [LICENSE](LICENSE.md) file for details.  
+This project is licensed under the Apache License. See the [LICENSE](LICENSE.md) file for details.
 
-## Contact  
+## To add:
+
+- [ ] Add final scraping for team stats
+- [ ] Add notification for chall solve
+
+## Contact
 
 For support or questions, feel free to open an issue or contact us directly
