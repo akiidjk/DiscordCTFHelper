@@ -208,5 +208,5 @@ def random_password(length: int = 16) -> str:
         error_msg = f"Password length should be between {MIN_LENGTH} and {MAX_LENGTH} characters for security reasons."
         raise ValueError(error_msg)
 
-    alphabet = string.ascii_letters + string.digits + string.punctuation
+    alphabet = string.ascii_letters + string.digits + "!@#$%^&*_+-=.?"
     return "".join(secrets.choice(alphabet) for _ in range(length))
