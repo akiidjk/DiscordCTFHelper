@@ -1,4 +1,5 @@
 import asyncio
+import datetime
 import threading
 
 import discord
@@ -10,44 +11,29 @@ from lib.logger import logger
 
 class CTFd:
     def __init__(self, ctf_url):
-        """
-        Initialize the CTFd API wrapper.
-
-        Args:
-            ctf_url (str): The base URL of the CTF platform.
-
-        """
         self.ctf_url = ctf_url.rstrip("/")
         self.session = requests.Session()
+        logger.info(f"CTFd API initialized with URL: {self.ctf_url}")
 
-    def _get(self, endpoint) -> dict | None:
-        """Helper function to make GET requests with error handling."""
+    def _get(self, endpoint) -> dict | None | str:
         try:
             response = self.session.get(self.ctf_url + endpoint)
             response.raise_for_status()
-            return response.json() if "application/json" in response.headers.get("Content-Type", "") else None
+            logger.debug(f"GET {endpoint} successful: {response.status_code}")
+            return response.json() if "application/json" in response.headers.get("Content-Type", "") else response.text
         except requests.exceptions.RequestException as err:
             logger.error(f"GET {endpoint} failed: {err}")
             return None
 
-    def _post(self, endpoint, data) -> dict | None:
-        """Helper function to make POST requests with error handling."""
+    def _post(self, endpoint, data) -> dict | None | str:
         try:
             response = self.session.post(self.ctf_url + endpoint, data=data, allow_redirects=False)
             response.raise_for_status()
-            return response.json() if "application/json" in response.headers.get("Content-Type", "") else None
+            logger.debug(f"POST {endpoint} successful: {response.status_code}")
+            return response.json() if "application/json" in response.headers.get("Content-Type", "") else response.text
         except requests.exceptions.RequestException as err:
             logger.error(f"POST {endpoint} failed: {err}")
             return None
-
-    def get_scoreboard(self) -> dict | None:
-        """Retrieve the CTF scoreboard."""
-        result = self._get("/api/v1/scoreboard") or {"success": False}
-        if isinstance(result, dict) and result.get("success"):
-            return result.get("data")
-
-        logger.error(f"GET /api/v1/scoreboard failed: {result}")
-        return None
 
     def get_team(self, team_id: int) -> dict | None | str:
         """Retrieve information about a specific team."""
@@ -68,13 +54,27 @@ class CTFd:
         return None
 
     def get_team_id_by_name(self, team_name: str) -> int | None:
-        """Retrieve the team ID by its name."""
-        teams = self._get("/api/v1/teams")
-        logger.debug(f"Teams: {teams}")
-        if teams and "data" in teams and isinstance(teams, dict):
-            for team in teams["data"]:
-                if team["name"] == team_name:
-                    return team["id"]
+        logger.info(f"Fetching team ID for: {team_name}")
+        teams_response = self._get("/api/v1/teams")
+        if not teams_response or not isinstance(teams_response, dict):
+            logger.error("Failed to retrieve teams for team ID lookup.")
+            return None
+
+        meta = teams_response.get("meta", {})
+        pagination = meta.get("pagination", {})
+        n_pages = pagination.get("pages", 0)
+
+        for page in range(1, n_pages + 1):
+            logger.debug(f"Fetching teams from page {page}...")
+            teams = self._get(f"/api/v1/teams?page={page}")
+            if teams and isinstance(teams, dict):
+                data = teams.get("data", [])
+                for team in data:
+                    if team.get("name") == team_name:
+                        logger.info(f"Found team {team_name} with ID {team.get('id')}")
+                        return team.get("id")
+
+        logger.warning(f"Team {team_name} not found.")
         return None
 
     def get_nonce(self) -> str | None:
@@ -83,6 +83,7 @@ class CTFd:
         if isinstance(response_text, str):
             soup = BeautifulSoup(response_text, "html.parser")
             nonce_element = soup.find("input", {"id": "nonce"})
+            logger.debug(type(nonce_element))
             if isinstance(nonce_element, Tag):
                 return str(nonce_element.get("value", ""))
         return None
@@ -127,16 +128,16 @@ class CTFd:
 
 
 class CTFdNotifier:
-    """Send notifications to the user."""
-
-    def __init__(self, ctfd, team_id: int, channel: discord.TextChannel):
+    def __init__(self, ctfd, team_id: int, channel: discord.TextChannel, role: discord.Role | None = None):
         self.ctfd = ctfd
         self.channel = channel
         self.team_id = team_id
+        self.role = role
         self.running = True
         self.loop = asyncio.get_event_loop()
         self.thread = threading.Thread(target=self._run_observer_loop, daemon=True)
         self.thread.start()
+        logger.info(f"CTFdNotifier initialized for team {team_id}.")
 
     def _run_observer_loop(self):
         """Run the observer loop."""
@@ -146,30 +147,36 @@ class CTFdNotifier:
         loop.close()
 
     async def observer(self):
-        """Observe changes"""
         old_l = 0
         while self.running:
             logger.debug("Observer loop running...")
             solves = self.ctfd.get_team_solves(self.team_id)
-            logger.debug(f"Solves: {solves}")
             if not isinstance(solves, dict):
-                logger.error("Invalid response from CTFd")
+                logger.error("Invalid response from CTFd, retrying in 60s.")
                 await asyncio.sleep(60)
                 continue
 
             solves = solves.get("data", [])
             actual_l = len(solves)
-            logger.debug(f"Actual length: {actual_l}")
-            logger.debug(f"Old length: {old_l}")
             n_new_solves = actual_l - old_l
-            logger.debug(f"Number of new solves: {n_new_solves}")
+
+            logger.debug(f"Total solves: {actual_l}, New solves: {n_new_solves}")
+
             for i in range(n_new_solves):
                 new_solve = solves[i]
                 challenge = new_solve.get("challenge", {})
                 user = new_solve.get("user", {})
+                time_solve = new_solve.get("date", datetime.datetime.now(tz=datetime.UTC))
+                if isinstance(time_solve, str):
+                    time_solve = datetime.datetime.strptime(time_solve, "%Y-%m-%dT%H:%M:%S.%fZ").replace(tzinfo=datetime.UTC)
 
-                message = f"**New solve**: ``{challenge.get('category')}::{challenge.get('name')}`` **by** ``{user.get('name')}`` 🍪"
-                logger.debug(f"Message: {message}")
+                message = (
+                    f"🏴 Flagged ``{challenge.get('name')}`` ({challenge.get('category')}) "
+                    f"by **@{user['name']}** | 🕒 {time_solve.strftime('%H:%M')} | "
+                    f"{self.role.mention if self.role else f'@{user["name"]}'}"
+                )
+
+                logger.info(f"New solve detected: {message}")
                 asyncio.run_coroutine_threadsafe(self.channel.send(message), self.loop)
 
             old_l = actual_l
