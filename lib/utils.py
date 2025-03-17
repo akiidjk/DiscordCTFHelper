@@ -11,6 +11,7 @@ from PIL import Image
 from lib.logger import logger
 
 BASE_URL = "https://ctftime.org/api/v1"
+HTTP_STATUS_OK = 200
 
 USER_AGENT_LIST = [
     "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/13.0.5 Safari/605.1.15",
@@ -43,7 +44,7 @@ async def get_logo(url: str) -> bytes:
                 aiohttp.ClientSession() as session,
                 session.get(url, headers={"User-Agent": random.choice(USER_AGENT_LIST)}) as response,  # noqa: S311
             ):
-                if response.status == 200:
+                if response.status == HTTP_STATUS_OK:
                     content = await response.read()
                     with Image.open(io.BytesIO(content)) as pillow_img:
                         if pillow_img.format != "PNG":
@@ -100,7 +101,7 @@ async def get_ctf_info(url: str) -> dict | None:
         response_text = await response.text()
         logger.debug(f"Response data: {response_text}")
 
-        if response.status == 200:  # noqa: PLR2004
+        if response.status == HTTP_STATUS_OK:
             return await response.json()
         logger.error(f"Failed to retrieve CTF information. Status code: {response.status}")
         return None
@@ -169,9 +170,7 @@ def create_description(team_name: str, team_data: dict, solves: dict) -> str:
 
     """
     solve_list = solves["data"]
-    categories = get_categories(solve_list)
 
-    # Conta i solve per categoria in modo efficiente
     category_solve_counts = defaultdict(int)
     for solve in solve_list:
         category_solve_counts[solve["challenge"]["category"]] += 1
