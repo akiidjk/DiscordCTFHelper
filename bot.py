@@ -23,10 +23,9 @@ from dotenv import load_dotenv
 from database import DatabaseManager
 from lib.ctfd import CTFd, CTFdNotifier
 from lib.logger import init_logger, logger
-from lib.utils import create_description, get_ctf_info
+from lib.utils import create_description, get_ctf_info, random_password
 
 intents = discord.Intents.all()
-
 
 levels = {
     "DEBUG": logging.DEBUG,
@@ -38,7 +37,7 @@ levels = {
 
 
 class DiscordBot(commands.Bot):
-    def __init__(self) -> None:
+    def __init__(self, email_ctfd: str, username_ctfd: str) -> None:
         super().__init__(
             command_prefix=commands.when_mentioned_or("!"),
             intents=intents,
@@ -47,6 +46,10 @@ class DiscordBot(commands.Bot):
         self.logger = logger
         self.database: DatabaseManager | None = None
         self.observer: CTFdNotifier | None = None
+        self.email_ctfd = email_ctfd
+        self.username_ctfd = username_ctfd
+        self.password_ctfd = random_password()
+        logger.info(f"Generated password for CTFd: {self.password_ctfd}")
 
     async def init_db(self) -> None:
         db_path = Path(__file__).parent / "database" / "database.db"
@@ -211,15 +214,14 @@ class DiscordBot(commands.Bot):
                 await channel.send(f"<@&{ctf.role_id}> The CTF has started! Good luck to all participants! :tada:")
 
             if ctfd_instance:
-                username, email, password = "bot", "bot@bot.com", "bot"
-                result = ctfd_instance.register(username, email, password)
+                result = ctfd_instance.register(self.username_ctfd, self.email_ctfd, self.password_ctfd)
                 if result and isinstance(channel, TextChannel):
-                    await channel.send(f"Bot registered in the CTFd instance with username: {username}, email: {email}, password: {password}.")
+                    await channel.send(f"Bot registered in the CTFd instance with username: {self.username_ctfd}, email: {self.email_ctfd}.")
 
                     team_id = ctfd_instance.get_team_id_by_name(ctf.team_name)
                     role = after.guild.get_role(ctf.role_id)
                     if team_id is not None:
-                        ctfd_instance.login(username, password)
+                        ctfd_instance.login(self.username_ctfd, self.password_ctfd)
                         self.observer = CTFdNotifier(ctfd_instance, team_id, channel, role)
                     else:
                         logger.error(f"Team {ctf.team_name} not found in the CTFd instance.")
@@ -243,8 +245,7 @@ class DiscordBot(commands.Bot):
                     if self.observer:
                         self.observer.stop_thread()
 
-                    username, password = "bot", "bot"
-                    ctfd_instance.login(username, password)
+                    ctfd_instance.login(self.username_ctfd, self.password_ctfd)
                     team_id = ctfd_instance.get_team_id_by_name(ctf.team_name)
                     if team_id:
                         team_data = ctfd_instance.get_team(team_id) if team_id else None
@@ -252,7 +253,7 @@ class DiscordBot(commands.Bot):
                         if isinstance(team_data, dict) and isinstance(solves, list):
                             description = create_description(ctf.team_name, team_data, solves)
                             embed = Embed(
-                            title=f"Team stats for {ctf.team_name}", description=description, timestamp=datetime.now(tz=UTC), color=0xBEBEFE
+                                title=f"Team stats for {ctf.team_name}", description=description, timestamp=datetime.now(tz=UTC), color=0xBEBEFE
                             )
                             await channel.send(embed=embed)
                         else:
@@ -303,6 +304,7 @@ class DiscordBot(commands.Bot):
         else:
             logger.info(f"Role not found for CTF {ctf.name}")
 
+
 if __name__ == "__main__":
     load_dotenv()
 
@@ -312,8 +314,16 @@ if __name__ == "__main__":
 
     init_logger(level=levels[sys.argv[1]])
 
-    bot = DiscordBot()
     TOKEN = os.getenv("TOKEN")
+    EMAIL_CTFD = os.getenv("EMAIL_CTFD", "")
+    USERNAME_CTFD = os.getenv("USERNAME_CTFD", "")
+
+    if not EMAIL_CTFD:
+        logger.warning("EMAIL_CTFD not found in .env file")
+    if not USERNAME_CTFD:
+        logger.warning("USERNAME_CTFD not found in .env file")
+
+    bot = DiscordBot(EMAIL_CTFD, USERNAME_CTFD)
     if TOKEN is None:
         message = "Please provide a token in the .env file"
         raise ValueError(message)
