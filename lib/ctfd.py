@@ -3,7 +3,7 @@ import threading
 
 import discord
 import requests
-from bs4 import BeautifulSoup
+from bs4 import BeautifulSoup, Tag
 
 from lib.logger import logger
 
@@ -20,37 +20,52 @@ class CTFd:
         self.ctf_url = ctf_url.rstrip("/")
         self.session = requests.Session()
 
-    def _get(self, endpoint) -> dict | None | str:
+    def _get(self, endpoint) -> dict | None:
         """Helper function to make GET requests with error handling."""
         try:
             response = self.session.get(self.ctf_url + endpoint)
             response.raise_for_status()
-            return response.json() if "application/json" in response.headers.get("Content-Type", "") else response.text
+            return response.json() if "application/json" in response.headers.get("Content-Type", "") else None
         except requests.exceptions.RequestException as err:
             logger.error(f"GET {endpoint} failed: {err}")
             return None
 
-    def _post(self, endpoint, data) -> dict | None | str:
+    def _post(self, endpoint, data) -> dict | None:
         """Helper function to make POST requests with error handling."""
         try:
             response = self.session.post(self.ctf_url + endpoint, data=data, allow_redirects=False)
             response.raise_for_status()
-            return response.json() if "application/json" in response.headers.get("Content-Type", "") else response.text
+            return response.json() if "application/json" in response.headers.get("Content-Type", "") else None
         except requests.exceptions.RequestException as err:
             logger.error(f"POST {endpoint} failed: {err}")
             return None
 
-    def get_scoreboard(self) -> dict | None | str:
+    def get_scoreboard(self) -> dict | None:
         """Retrieve the CTF scoreboard."""
-        return self._get("/api/v1/scoreboard")
+        result = self._get("/api/v1/scoreboard") or {"success": False}
+        if isinstance(result, dict) and result.get("success"):
+            return result.get("data")
+
+        logger.error(f"GET /api/v1/scoreboard failed: {result}")
+        return None
 
     def get_team(self, team_id: int) -> dict | None | str:
         """Retrieve information about a specific team."""
-        return self._get(f"/api/v1/teams/{team_id}")
+        result = self._get(f"/api/v1/teams/{team_id}")
+        if isinstance(result, dict) and result.get("success"):
+            return result.get("data")
+
+        logger.error(f"GET /api/v1/teams/{team_id} failed: {result}")
+        return None
 
     def get_team_solves(self, team_id: int) -> dict | None | str:
         """Retrieve the solve history of a team."""
-        return self._get(f"/api/v1/teams/{team_id}/solves")
+        result = self._get(f"/api/v1/teams/{team_id}/solves")
+        if isinstance(result, dict) and result.get("success"):
+            return result.get("data")
+
+        logger.error(f"GET /api/v1/teams/{team_id}/solves failed: {result}")
+        return None
 
     def get_team_id_by_name(self, team_name: str) -> int | None:
         """Retrieve the team ID by its name."""
@@ -65,10 +80,11 @@ class CTFd:
     def get_nonce(self) -> str | None:
         """Retrieve the CSRF nonce required for authentication actions."""
         response_text = self._get("/register")
-        if response_text:
+        if isinstance(response_text, str):
             soup = BeautifulSoup(response_text, "html.parser")
             nonce_element = soup.find("input", {"id": "nonce"})
-            return nonce_element["value"] if nonce_element else None
+            if isinstance(nonce_element, Tag):
+                return str(nonce_element.get("value", ""))
         return None
 
     def register(self, username, email, password):
@@ -80,7 +96,9 @@ class CTFd:
             if response:
                 logger.info("Registration successful")
                 return True
-        logger.error("Registration failed")
+            logger.error("Registration failed")
+        else:
+            logger.error("Failed to retrieve nonce")
         return False
 
     def login(self, username, password):
@@ -93,7 +111,9 @@ class CTFd:
                 logger.info("Login successful")
                 logger.debug(f"Cookies: {self.session.cookies}")
                 return True
-        logger.error("Login failed")
+            logger.error("Login failed")
+        else:
+            logger.error("Failed to retrieve nonce")
         return False
 
     def logout(self):
@@ -114,9 +134,7 @@ class CTFdNotifier:
         self.channel = channel
         self.team_id = team_id
         self.running = True
-
         self.loop = asyncio.get_event_loop()
-
         self.thread = threading.Thread(target=self._run_observer_loop, daemon=True)
         self.thread.start()
 
