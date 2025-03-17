@@ -303,30 +303,6 @@ class DiscordBot(commands.Bot):
         else:
             logger.info(f"Role not found for CTF {ctf.name}")
 
-
-def test(bot: DiscordBot):
-    # ctf_url = "https://ctf.k1nd4sus.it"
-    ctf_url = "http://localhost"
-    ctfd = CTFd(ctf_url)
-    username, email, password = "ByteTheCookies", "byte@the.cookies", "3GhXJe6L2bnlp$Kc&iTB"
-    ctfd.register(username, email, password)
-    ctfd.login(username, password)
-    team_id = ctfd.get_team_id_by_name("a")
-    logger.debug(f"Team ID: {team_id}")
-
-    with open("scoreboard.json", "w") as f:
-        json.dump(ctfd.get_scoreboard(), f, indent=4)
-
-    with open("solves.json", "w") as f:
-        json.dump(ctfd.get_team_solves(team_id), f, indent=4)
-
-    with open("team.json", "w") as f:
-        json.dump(ctfd.get_team(team_id), f, indent=4)
-
-    description = create_description("ByteTheCookies", ctfd.get_team(team_id)["data"], ctfd.get_team_solves(team_id))
-    print(description)
-
-
 if __name__ == "__main__":
     load_dotenv()
 
