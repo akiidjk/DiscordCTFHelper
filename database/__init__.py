@@ -13,7 +13,9 @@ class DatabaseManager:
         Add a CTF to the database.
         """
         await self.connection.execute(
-            "INSERT INTO ctf (server_id,name, description, text_channel_id, event_id, role_id, msg_id, ctfd, ctftime_url, team_name) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+            """INSERT INTO ctf
+            (server_id, name, description, text_channel_id, event_id, role_id, msg_id, ctfd, ctftime_url, team_name)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
             (
                 ctf.server_id,
                 ctf.name,
@@ -29,7 +31,7 @@ class DatabaseManager:
         )
         await self.connection.commit()
 
-    async def get_ctf_by_name(self, name: str, server_id: int) -> CTFModel:
+    async def get_ctf_by_name(self, name: str, server_id: int) -> CTFModel | None:
         """
         Get a CTF from the database.
 
@@ -38,7 +40,7 @@ class DatabaseManager:
             server_id (int): The server ID.
 
         Returns:
-            CTFModel: The CTF.
+            Optional[CTFModel]: The CTF or None if not found.
 
         """
         logger.debug(f"{name=}, {server_id=}")
@@ -68,7 +70,7 @@ class DatabaseManager:
                 team_name=row[10],
             )
 
-    async def get_ctf_by_message_id(self, message_id: int, server_id: int) -> CTFModel:
+    async def get_ctf_by_message_id(self, message_id: int, server_id: int) -> CTFModel | None:
         """
         Get a CTF from the database.
 
@@ -77,7 +79,7 @@ class DatabaseManager:
             server_id (int): The server ID.
 
         Returns:
-            CTFModel: The CTF.
+            Optional[CTFModel]: The CTF or None if not found.
 
         """
         async with self.connection.execute(
@@ -164,7 +166,7 @@ class DatabaseManager:
             server_id (int): The server ID.
 
         Returns:
-            ServerModel | None: The server.
+            Optional[ServerModel]: The server or None if not found.
 
         """
         async with self.connection.execute("SELECT * FROM server WHERE id = ?", (server_id,)) as cursor:
@@ -191,7 +193,7 @@ class DatabaseManager:
         """
         try:
             await self.connection.execute(
-                "UPDATE server SET active_category_id = ? AND set archive_category_id = ? WHERE id = ?",
+                "UPDATE server SET active_category_id = ?, archive_category_id = ? WHERE id = ?",
                 (
                     server_model.active_category_id,
                     server_model.archive_category_id,
