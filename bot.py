@@ -1,4 +1,3 @@
-import json
 import logging
 import os
 import platform
@@ -196,33 +195,32 @@ class DiscordBot(commands.Bot):
             return
 
         ctf = await self.database.get_ctf_by_name(after.name, after.guild.id)
-
         if ctf is None:
             logger.info(f"CTF {after.name=} not found in database")
             return
 
-        ctfd = False
+        ctfd_instance = False
         if ctf.ctfd:
             ctftime_data = await get_ctf_info(ctf.ctftime_url)
             if ctftime_data:
-                url_ctf = ctftime_data["url"]
-                ctfd = CTFd(url_ctf)
+                ctfd_instance = CTFd(ctftime_data["url"])
 
         if before.status != after.status and after.status == EventStatus.active:
             channel = self.get_channel(ctf.text_channel_id)
             if isinstance(channel, TextChannel):
                 await channel.send(f"<@&{ctf.role_id}> The CTF has started! Good luck to all participants! :tada:")
 
-            if ctfd:
+            if ctfd_instance:
                 username, email, password = "bot", "bot@bot.com", "bot"
-                result = ctfd.register(username, email, password)
+                result = ctfd_instance.register(username, email, password)
                 if result and isinstance(channel, TextChannel):
                     await channel.send(f"Bot registered in the CTFd instance with username: {username}, email: {email}, password: {password}.")
 
-                    team_id = ctfd.get_team_id_by_name(ctf.team_name)
+                    team_id = ctfd_instance.get_team_id_by_name(ctf.team_name)
+                    role = after.guild.get_role(ctf.role_id)
                     if team_id is not None:
-                        ctfd.login(username, password)
-                        self.observer = CTFdNotifier(ctfd, team_id, channel)
+                        ctfd_instance.login(username, password)
+                        self.observer = CTFdNotifier(ctfd_instance, team_id, channel, role)
                     else:
                         logger.error(f"Team {ctf.team_name} not found in the CTFd instance.")
 
@@ -241,22 +239,24 @@ class DiscordBot(commands.Bot):
 
                 await channel.send(f"<@&{ctf.role_id}> The CTF **{ctf.name}** has ended! The channel has been moved to the archived category.")
 
-                if ctfd:
+                if ctfd_instance:
                     if self.observer:
                         self.observer.stop_thread()
 
                     username, password = "bot", "bot"
-                    ctfd.login(username, password)
-                    team_id = ctfd.get_team_id_by_name(ctf.team_name)
+                    ctfd_instance.login(username, password)
+                    team_id = ctfd_instance.get_team_id_by_name(ctf.team_name)
                     if team_id:
-                        team_data = ctfd.get_team(team_id) if team_id else None
-                        solves = ctfd.get_team_solves(team_id) if team_id else None
-                        description = create_description(ctf.team_name, team_data["data"], solves)
-                        embed = Embed(
+                        team_data = ctfd_instance.get_team(team_id) if team_id else None
+                        solves = ctfd_instance.get_team_solves(team_id) if team_id else None
+                        if isinstance(team_data, dict) and isinstance(solves, list):
+                            description = create_description(ctf.team_name, team_data, solves)
+                            embed = Embed(
                             title=f"Team stats for {ctf.team_name}", description=description, timestamp=datetime.now(tz=UTC), color=0xBEBEFE
-                        )
-                        await channel.send(embed=embed)
-
+                            )
+                            await channel.send(embed=embed)
+                        else:
+                            logger.error(f"Failed to fetch team data or solves for {ctf.team_name}")
                     else:
                         logger.error(f"Team {ctf.team_name} not found in the CTFd instance")
                         return
@@ -319,3 +319,26 @@ if __name__ == "__main__":
         raise ValueError(message)
 
     bot.run(TOKEN)
+
+
+# def test():
+#     # ctf_url = "https://ctf.k1nd4sus.it"  # noqa: ERA001
+#     ctf_url = "http://localhost"  # noqa: ERA001
+#     ctfd = CTFd(ctf_url)  # noqa: ERA001
+#     username, email, password = "ByteTheCookies", "byte@the.cookies", "3GhXJe6L2bnlp$Kc&iTB"  # noqa: ERA001
+#     ctfd.register(username, email, password)  # noqa: ERA001
+#     ctfd.login(username, password)  # noqa: ERA001
+#     team_id = ctfd.get_team_id_by_name("a")  # noqa: ERA001
+#     logger.debug(f"Team ID: {team_id}")  # noqa: ERA001
+
+#     with open("scoreboard.json", "w") as f:
+#         json.dump(ctfd.get_scoreboard(), f, indent=4)  # noqa: ERA001
+
+#     with open("solves.json", "w") as f:
+#         json.dump(ctfd.get_team_solves(team_id), f, indent=4) # noqa: ERA001
+
+#     with open("team.json", "w") as f:
+#         json.dump(ctfd.get_team(team_id), f, indent=4)  # noqa: ERA001
+
+#     description = create_description("ByteTheCookies", ctfd.get_team(team_id), ctfd.get_team_solves(team_id)) # noqa: ERA001
+#     print(description) # noqa: ERA001
