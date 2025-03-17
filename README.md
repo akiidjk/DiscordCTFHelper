@@ -63,6 +63,8 @@
 
    ```env
    TOKEN=<discord_token>
+   USERNAME_CTFD=<username_ctfd>
+   EMAIL_CTFD=<email_ctfd>
    ```
 
 5. Run the bot:
@@ -88,8 +90,8 @@ This project is licensed under the Apache License. See the [LICENSE](LICENSE.md)
 
 ## To add:
 
-- [ ] Add final scraping for team stats
-- [ ] Add notification for chall solve
+- [x] Add final scraping for team stats
+- [x] Add notification for chall solve
 
 ## Contact
 
