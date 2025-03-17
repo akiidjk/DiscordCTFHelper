@@ -143,10 +143,12 @@ class CTFdNotifier:
             actual_l = len(solves)
             logger.debug(f"Actual length: {actual_l}")
             logger.debug(f"Old length: {old_l}")
-            if actual_l > old_l and solves:
-                first_solve = solves[0]
-                challenge = first_solve.get("challenge", {})
-                user = first_solve.get("user", {})
+            n_new_solves = actual_l - old_l
+            logger.debug(f"Number of new solves: {n_new_solves}")
+            for i in range(n_new_solves):
+                new_solve = solves[i]
+                challenge = new_solve.get("challenge", {})
+                user = new_solve.get("user", {})
 
                 message = f"**New solve**: ``{challenge.get('category')}::{challenge.get('name')}`` **by** ``{user.get('name')}`` 🍪"
                 logger.debug(f"Message: {message}")
