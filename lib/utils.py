@@ -156,25 +156,22 @@ def get_categories(solves: list[dict]) -> list[str]:
     return list({solve["challenge"]["category"] for solve in solves})
 
 
-def create_description(team_name: str, team_data: dict, solves: dict) -> str:
+def create_description(team_name: str, team_data: dict, solves: list[dict]) -> str:
     """
     Create a formatted description with team statistics and solve details.
 
     Args:
         team_name (str): The name of the team.
         team_data (dict): Team information (score, place, members).
-        solves (dict): Dictionary containing solve data.
+        solves (list[dict]): List of solve data.
 
     Returns:
         str: The formatted description.
 
     """
-    solve_list = solves["data"]
-
     category_solve_counts = defaultdict(int)
-    for solve in solve_list:
+    for solve in solves:
         category_solve_counts[solve["challenge"]["category"]] += 1
-
     category_details = "\n".join(f"- {category}: {count} solves" for category, count in category_solve_counts.items())
 
     return f"""
@@ -185,7 +182,7 @@ def create_description(team_name: str, team_data: dict, solves: dict) -> str:
 - Number of members: {len(team_data["members"])}
 
 ## Team solves:
-- Total solves: {solves["meta"]["count"]}
+- Total solves: {len(solves)}
 
 {category_details}
 """
