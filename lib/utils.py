@@ -1,6 +1,8 @@
 import io
 import random
 import re
+import secrets
+import string
 from collections import defaultdict
 from pathlib import Path
 
@@ -12,6 +14,9 @@ from lib.logger import logger
 
 BASE_URL = "https://ctftime.org/api/v1"
 HTTP_STATUS_OK = 200
+MAX_LENGTH = 100
+MIN_LENGTH = 8
+
 
 USER_AGENT_LIST = [
     "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/13.0.5 Safari/605.1.15",
@@ -186,3 +191,22 @@ def create_description(team_name: str, team_data: dict, solves: list[dict]) -> s
 
 {category_details}
 """
+
+
+def random_password(length: int = 16) -> str:
+    """
+    Generate a cryptographically secure random password.
+
+    Args:
+        length (int): Length of the generated password (default: 16).
+
+    Returns:
+        str: A secure random password.
+
+    """
+    if length < MIN_LENGTH or length > MAX_LENGTH:
+        error_msg = f"Password length should be between {MIN_LENGTH} and {MAX_LENGTH} characters for security reasons."
+        raise ValueError(error_msg)
+
+    alphabet = string.ascii_letters + string.digits + string.punctuation
+    return "".join(secrets.choice(alphabet) for _ in range(length))
