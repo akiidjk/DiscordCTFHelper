@@ -1,3 +1,4 @@
+import os
 from datetime import UTC, datetime
 
 from discord import (
@@ -19,7 +20,7 @@ from discord.ext import commands
 
 from lib.logger import logger
 from lib.models import CTFModel, ServerModel
-from lib.utils import check_url, get_ctf_info, get_logo, sanitize_input
+from lib.utils import check_url, get_ctf_info, get_logo, is_ctfd, sanitize_input
 
 MAX_DESC_LENGTH = 997
 
@@ -252,15 +253,15 @@ class CTF(commands.Cog, name="ctftime"):
     )
     @app_commands.describe(
         url="The URL of the event",
-        ctfd="The ctf is hosted using CTFd (this add some features)",
-        team_name="The name of the team (is need if ctfd is True)",
+        team_name="The name of the team",
     )
-    async def create_ctf(self, interaction: Interaction, url: str, ctfd: bool = False, team_name: str = "") -> None:
+    async def create_ctf(self, interaction: Interaction, url: str, team_name: str = os.getenv("TEAM_NAME", "")) -> None:
         await interaction.response.defer(ephemeral=True)
+        ctfd = is_ctfd(url)
 
         if ctfd and not team_name:
             await interaction.followup.send(
-                "Team name is required when using CTFd. ❌",
+                "Team name is required when using CTFd (setup in the .env file or add the team-name on the command). ❌",
                 ephemeral=True,
             )
             return
@@ -361,6 +362,7 @@ class CTF(commands.Cog, name="ctftime"):
             return
 
         ctf = CTFModel(
+            id=-1,
             server_id=interaction.guild.id,
             name=data["title"],
             description=data["description"],
@@ -375,6 +377,28 @@ class CTF(commands.Cog, name="ctftime"):
 
         await self.bot.database.add_ctf(ctf)
         await interaction.followup.send("CTF created in the discord server ✅", ephemeral=True)
+
+    @app_commands.command(
+        name="generate_report",
+        description="Get a report of a CTF event in the discord server.",
+    )
+    async def generate_report(self, interaction: Interaction) -> None:
+        reports = await self.bot.database.get_reports()
+        if not reports:
+            await interaction.response.send_message("CTF report not found, this is an error or the ctf is not finished ❗", ephemeral=True)
+            return
+
+        total_solves = sum(report.solves for report in reports)
+        total_score = sum(report.score for report in reports)
+        average_place = sum(report.place for report in reports) / len(reports)
+
+        embed = Embed(title="CTF Report", description="Report of the CTF event", color=Color.blue())
+        embed.add_field(name="Average Place", value=average_place, inline=False)
+        embed.add_field(name="Total Challenge Solved", value=total_solves, inline=False)
+        embed.add_field(name="Total Score", value=total_score, inline=False)
+
+        await interaction.response.defer(ephemeral=True)
+        await interaction.followup.send(embed=embed, content="CTF report generated in the discord server ✅", ephemeral=True)
 
 
 async def setup(bot) -> None:
