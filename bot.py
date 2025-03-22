@@ -23,6 +23,7 @@ from dotenv import load_dotenv
 from database import DatabaseManager
 from lib.ctfd import CTFd, CTFdNotifier
 from lib.logger import init_logger, logger
+from lib.models import ReportModel
 from lib.utils import create_description, get_ctf_info, random_password
 
 intents = discord.Intents.all()
@@ -256,6 +257,15 @@ class DiscordBot(commands.Bot):
                                 title=f"Team stats for {ctf.team_name}", description=description, timestamp=datetime.now(tz=UTC), color=0xBEBEFE
                             )
                             await channel.send(embed=embed)
+
+                            report = ReportModel(
+                                ctf_id=ctf.id,
+                                place=int(team_data['place'][:2]),
+                                solves=len(solves),
+                                score=team_data['score'],
+                            )
+                            await self.database.add_report(report=report)
+
                         else:
                             logger.error(f"Failed to fetch team data or solves for {ctf.team_name}")
                     else:
