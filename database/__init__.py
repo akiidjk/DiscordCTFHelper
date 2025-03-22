@@ -1,12 +1,50 @@
 import aiosqlite
 
 from lib.logger import logger
-from lib.models import CTFModel, ServerModel
+from lib.models import CTFModel, ReportModel, ServerModel
 
 
 class DatabaseManager:
     def __init__(self, *, connection: aiosqlite.Connection) -> None:
         self.connection = connection
+
+    async def add_report(self, report: ReportModel) -> None:
+        """
+        Add a report to the database.
+        """
+        await self.connection.execute(
+            """INSERT INTO report
+            (ctf_id, position, solves)
+            VALUES (?, ?, ?)""",
+            (
+                report.ctf_id,
+                report.place,
+                report.solves,
+                report.score,
+            ),
+        )
+        await self.connection.commit()
+
+    async def get_report(self, ctf_id: int) -> ReportModel | None:
+        """
+        Get a report from the database.
+
+        Args:
+            ctf_id (int): The ID of the CTF.
+
+        Returns:
+            Optional[ReportModel]: The report or None if not found.
+
+        """
+        async with self.connection.execute(
+            """SELECT ctf_id, position, solves
+            FROM report""",
+            (ctf_id,),
+        ) as cursor:
+            row = await cursor.fetchone()
+            if row is None:
+                return None
+            return ReportModel(*row)
 
     async def add_ctf(self, ctf: CTFModel) -> None:
         """
@@ -58,6 +96,7 @@ class DatabaseManager:
                 return None
 
             return CTFModel(
+                id=row[0],
                 server_id=row[1],
                 name=row[2],
                 description=row[3],
@@ -95,6 +134,7 @@ class DatabaseManager:
                 return None
 
             return CTFModel(
+                id=row[0],
                 server_id=row[1],
                 name=row[2],
                 description=row[3],

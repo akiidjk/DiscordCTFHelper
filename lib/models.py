@@ -1,10 +1,10 @@
 from dataclasses import dataclass
 
-
 @dataclass(frozen=True)
 class CTFModel:
     """CTF model class"""
 
+    id: int
     server_id: int
     name: str
     description: str
@@ -25,3 +25,12 @@ class ServerModel:
     active_category_id: int
     archive_category_id: int
     role_manager_id: int
+
+@dataclass(frozen=True)
+class ReportModel:
+    """Report model class"""
+
+    ctf_id: int
+    place: int
+    solves: int
+    score: int
