@@ -8,6 +8,7 @@ from pathlib import Path
 
 import aiofiles
 import aiohttp
+import requests
 from PIL import Image
 
 from lib.logger import logger
@@ -210,3 +211,7 @@ def random_password(length: int = 16) -> str:
 
     alphabet = string.ascii_letters + string.digits + "!@#$%^&*_+-=.?"
     return "".join(secrets.choice(alphabet) for _ in range(length))
+
+def is_ctfd(url: str) -> bool:
+    r = requests.get(url + "/api/v1/users",timeout=10)
+    return r.status_code != requests.codes.not_found
