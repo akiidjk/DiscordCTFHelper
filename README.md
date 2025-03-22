@@ -14,6 +14,7 @@
   - [Usage](#usage)
   - [RAD](#rad)
   - [License](#license)
+  - [To add](#to-add)
   - [Contact](#contact)
 
 ## About
@@ -65,6 +66,7 @@
    TOKEN=<discord_token>
    USERNAME_CTFD=<username_ctfd>
    EMAIL_CTFD=<email_ctfd>
+   TEAM_NAME=<team_name>
    ```
 
 5. Run the bot:
@@ -88,10 +90,11 @@
 
 This project is licensed under the Apache License. See the [LICENSE](LICENSE.md) file for details.
 
-## To add:
+## To add
 
 - [x] Add final scraping for team stats
 - [x] Add notification for chall solve
+- [x] Add overall report generation
 
 ## Contact
 
