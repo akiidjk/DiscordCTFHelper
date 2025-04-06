@@ -178,6 +178,7 @@ class CTF(commands.Cog, name="ctftime"):
 
         msg = await channel.send(embed=embed)
         await msg.add_reaction("✅")
+        await msg.pin()
         return msg
 
     async def create_role(self, interaction: Interaction, name: str) -> Role | None:
