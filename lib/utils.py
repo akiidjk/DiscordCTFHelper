@@ -1,14 +1,10 @@
 import io
 import random
 import re
-import secrets
-import string
-from collections import defaultdict
 from pathlib import Path
 
 import aiofiles
 import aiohttp
-import requests
 from PIL import Image
 
 from lib.logger import logger

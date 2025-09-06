@@ -3,7 +3,6 @@ import os
 import platform
 import random
 import sys
-from datetime import UTC, datetime
 from pathlib import Path
 
 import aiofiles
@@ -11,7 +10,6 @@ import aiosqlite
 import discord
 from discord import (
     CategoryChannel,
-    Embed,
     EventStatus,
     ScheduledEvent,
     TextChannel,
@@ -22,7 +20,6 @@ from dotenv import load_dotenv
 
 from database import DatabaseManager
 from lib.logger import init_logger, logger
-from lib.models import ReportModel
 
 intents = discord.Intents.all()
 
@@ -263,7 +260,7 @@ if __name__ == "__main__":
     load_dotenv()
 
     if len(sys.argv) != 2 or sys.argv[1] not in levels:
-        message = "Please provide a valid logging level: DEBUG, INFO, WARNING, ERROR, CRITICAL"
+        message = "Please provide a valid logging level: DEBUG, INFO, WARNING, ERROR, CRITICAL (python3 bot.py <level>)"
         raise ValueError(message)
 
     init_logger(level=levels[sys.argv[1]])
