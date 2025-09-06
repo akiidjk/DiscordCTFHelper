@@ -15,7 +15,6 @@ CREATE TABLE IF NOT EXISTS ctf (
   role_id INTEGER NOT NULL,
   msg_id INTEGER NOT NULL,
   ctftime_url TEXT NOT NULL,
-  ctfd BOOLEAN NOT NULL DEFAULT FALSE,
   team_name TEXT NOT NULL DEFAULT '',
   FOREIGN KEY (server_id) REFERENCES server (id)
 );

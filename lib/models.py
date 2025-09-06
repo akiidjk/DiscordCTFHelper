@@ -1,5 +1,6 @@
 from dataclasses import dataclass
 
+
 @dataclass(frozen=True)
 class CTFModel:
     """CTF model class"""
@@ -13,7 +14,6 @@ class CTFModel:
     role_id: int
     msg_id: int
     ctftime_url: str
-    ctfd: bool
     team_name: str
 
 

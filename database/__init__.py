@@ -62,7 +62,6 @@ class DatabaseManager:
                 ctf.event_id,
                 ctf.role_id,
                 ctf.msg_id,
-                ctf.ctfd,
                 ctf.ctftime_url,
                 ctf.team_name,
             ),
@@ -105,8 +104,7 @@ class DatabaseManager:
                 role_id=row[6],
                 msg_id=row[7],
                 ctftime_url=row[8],
-                ctfd=row[9],
-                team_name=row[10],
+                team_name=row[9],
             )
 
     async def get_ctf_by_message_id(self, message_id: int, server_id: int) -> CTFModel | None:
@@ -143,8 +141,7 @@ class DatabaseManager:
                 role_id=row[6],
                 msg_id=row[7],
                 ctftime_url=row[8],
-                ctfd=row[9],
-                team_name=row[10],
+                team_name=row[9],
             )
 
     async def is_ctf_present(self, name: str, server_id: int) -> bool:

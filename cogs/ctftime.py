@@ -20,7 +20,7 @@ from discord.ext import commands
 
 from lib.logger import logger
 from lib.models import CTFModel, ServerModel
-from lib.utils import check_url, get_ctf_info, get_logo, is_ctfd, sanitize_input
+from lib.utils import check_url, get_ctf_info, get_logo, sanitize_input
 
 MAX_DESC_LENGTH = 997
 
@@ -258,14 +258,6 @@ class CTF(commands.Cog, name="ctftime"):
     )
     async def create_ctf(self, interaction: Interaction, url: str, team_name: str = os.getenv("TEAM_NAME", "")) -> None:
         await interaction.response.defer(ephemeral=True)
-        ctfd = is_ctfd(url)
-
-        if ctfd and not team_name:
-            await interaction.followup.send(
-                "Team name is required when using CTFd (setup in the .env file or add the team-name on the command). ❌",
-                ephemeral=True,
-            )
-            return
 
         if interaction.guild.id not in self.category_active_id:
             res = await self.set_cat(server_id=interaction.guild.id if interaction.guild else 0)
@@ -372,7 +364,6 @@ class CTF(commands.Cog, name="ctftime"):
             role_id=role.id,
             msg_id=msg.id,
             ctftime_url=url,
-            ctfd=ctfd,
             team_name=team_name,
         )
 
