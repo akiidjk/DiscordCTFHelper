@@ -64,8 +64,6 @@
 
    ```env
    TOKEN=<discord_token>
-   USERNAME_CTFD=<username_ctfd>
-   EMAIL_CTFD=<email_ctfd>
    TEAM_NAME=<team_name>
    ```
 
@@ -93,8 +91,10 @@ This project is licensed under the Apache License. See the [LICENSE](LICENSE.md)
 ## To add
 
 - [x] Add final scraping for team stats
-- [x] Add notification for chall solve
 - [x] Add overall report generation
+- [ ] New handling of channel one channel only read width the banner show
+- [ ] Add notification for chall solve
+- [ ] Reaction cookie and fire too each flag
 
 ## Contact
 

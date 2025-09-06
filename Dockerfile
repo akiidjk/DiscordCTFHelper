@@ -1,22 +1,22 @@
-FROM python:3.12-slim AS builder
+FROM python:3.12-alpine AS builder
 
 WORKDIR /app
 
-RUN apt-get update && apt-get install -y --no-install-recommends \
+RUN apk add --no-cache \
     gcc \
-    libffi-dev \
-    && rm -rf /var/lib/apt/lists/*
+    musl-dev \
+    libffi-dev
 
 COPY requirements.txt ./
 
 RUN pip install --no-cache-dir --upgrade pip && \
     pip install --no-cache-dir -r requirements.txt
 
-FROM python:3.12-slim
+FROM python:3.12-alpine
 
 WORKDIR /app
 
-RUN useradd -m -s /bin/bash botuser && \
+RUN adduser -D -s /bin/sh botuser && \
     mkdir -p /app/logs /app/database && \
     chown -R botuser:botuser /app
 
