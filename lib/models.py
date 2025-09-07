@@ -14,7 +14,7 @@ class CTFModel:
     role_id: int
     msg_id: int
     ctftime_id: int
-    team_name: str
+
 
 
 @dataclass(frozen=True)
@@ -26,6 +26,7 @@ class ServerModel:
     archive_category_id: int
     role_manager_id: int
     feed_channel_id: int
+    team_id: int
 
 @dataclass(frozen=True)
 class ReportModel:

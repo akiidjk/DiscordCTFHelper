@@ -7,6 +7,8 @@ from discord import (
     Member,
     Role,
     TextChannel,
+    Embed,
+    Color,
     app_commands,
 )
 from discord.components import SelectOption
@@ -16,8 +18,8 @@ from discord.ui.view import View
 
 from lib.discord import check_permission, create_channel, create_embed, create_events, create_role, send_error
 from lib.logger import logger
-from lib.models import CTFModel, ServerModel
-from lib.utils import get_ctf_info, sanitize_input
+from lib.models import CTFModel, ReportModel, ServerModel
+from lib.utils import get_ctf_info, get_results_info, sanitize_input
 
 MAX_DESC_LENGTH = 997
 
@@ -34,7 +36,8 @@ class CTF(commands.Cog, name="ctftime"):
         category_active="The name of the category for the next or current ctf",
         category_archived="The name of the category for the archived ctf",
         role_manager="The only role that can run the create_ctf command",
-        feed_channel="The channel feed for publish the ctf"
+        feed_channel="The channel feed for publish the ctf",
+        team_id="The id of the team",
     )
     async def init(
         self,
@@ -43,6 +46,7 @@ class CTF(commands.Cog, name="ctftime"):
         category_archived: CategoryChannel,
         role_manager: Role,
         feed_channel: TextChannel,
+        team_id: int,
     ) -> None:
         await interaction.response.defer(ephemeral=True)
 
@@ -66,7 +70,8 @@ class CTF(commands.Cog, name="ctftime"):
                 active_category_id=category_active.id,
                 archive_category_id=category_archived.id,
                 role_manager_id=role_manager.id,
-                feed_channel_id=feed_channel.id
+                feed_channel_id=feed_channel.id,
+                team_id=team_id
             )
         )
 
@@ -81,9 +86,8 @@ class CTF(commands.Cog, name="ctftime"):
     )
     @app_commands.describe(
         id="The ID of the event",
-        team_name="The name of the team",
     )
-    async def create(self, interaction: Interaction, id: int, team_name: str = os.getenv("TEAM_NAME", "")) -> None:
+    async def create(self, interaction: Interaction, id: int) -> None:
         await interaction.response.defer(ephemeral=True)
 
         if not interaction.guild:
@@ -188,7 +192,6 @@ class CTF(commands.Cog, name="ctftime"):
             role_id=role.id,
             msg_id=msg.id,
             ctftime_id=id,
-            team_name=team_name,
         )
 
         await self.bot.database.add_ctf(ctf)
@@ -265,6 +268,119 @@ class CTF(commands.Cog, name="ctftime"):
         view = View()
         view.add_item(select)
         await interaction.followup.send("Select the CTF to remove", view=view, ephemeral=True)
+
+
+    @app_commands.command(
+        name="flag",
+        description="Register a flag in the ctf.",
+    )
+    @app_commands.describe(
+        flag="the flag"
+    )
+    async def flag(self, interaction: Interaction, flag: str) -> None:
+        await interaction.response.defer(ephemeral=True)
+
+        if not interaction.guild:
+            await send_error(interaction, "guild")
+            return
+
+        if not isinstance(interaction.user, Member):
+            await send_error(interaction, "member")
+            return
+
+        ctf = await self.bot.database.get_ctf_by_channel_id(interaction.channel_id, interaction.guild.id)
+        if not ctf:
+            await interaction.followup.send(
+                "No CTFs are currently active in channel. ❌",
+                ephemeral=True,
+            )
+            return
+
+        report = await self.bot.database.get_report(ctf.id)
+
+        if report:
+            await self.bot.database.update_report(ctf.id,ReportModel(
+                ctf_id=ctf.id,
+                place=report.place,
+                score=report.score,
+                solves= report.solves + 1
+            ))
+        else:
+            await self.bot.database.add_report(ReportModel(
+                ctf_id=ctf.id,
+                place=-1,
+                score=-1,
+                solves=1
+            ))
+
+        if isinstance(interaction.channel, TextChannel):
+            msg = await interaction.channel.send(f"<@&{ctf.role_id}> NEW FLAG FOUND by {interaction.user.mention}! 🎉\n> `{flag}`")
+            await msg.add_reaction("🔥")
+        else:
+            await interaction.followup.send(
+                "Unable to register the flag in this channel type. ❌",
+                        ephemeral=True,
+            )
+
+        await interaction.followup.send("Flag registered successfully ✅", ephemeral=True)
+
+
+
+    @app_commands.command(
+        name="report",
+        description="Generate a report for the current CTF.",
+    )
+    async def generate_report(self, interaction: Interaction) -> None:
+        await interaction.response.defer(ephemeral=True)
+
+        if not interaction.guild:
+            await send_error(interaction, "guild")
+            return
+
+        if not isinstance(interaction.user, Member):
+            await send_error(interaction, "member")
+            return
+
+        ctf = await self.bot.database.get_ctf_by_channel_id(interaction.channel_id, interaction.guild.id)
+        if not ctf:
+            await interaction.followup.send(
+                "No CTFs are currently active in this channel. ❌",
+                ephemeral=True,
+            )
+            return
+
+        server = await self.bot.database.get_server_by_id(interaction.guild.id)
+
+        report = await self.bot.database.get_report(ctf.id)
+        if not report:
+            await interaction.followup.send(
+                "No report data is available for this CTF. ❌",
+                ephemeral=True,
+            )
+            return
+
+        if report.place == -1 or report.score == -1:
+            results = await get_results_info(ctf.ctftime_id,ctf.name.split("-")[-1].strip(), server.team_id)
+            if results:
+                report = ReportModel(
+                    ctf_id=ctf.id,
+                    place=results.get("place", -1),
+                    score=results.get("points", -1),
+                    solves=report.solves
+                )
+                await self.bot.database.update_report(ctf.id, report)
+
+        embed = Embed(
+            title=f"Report for {ctf.name}",
+            color=Color.blue(),
+            timestamp=datetime.utcnow(),
+        )
+        embed.add_field(name="Place", value=report.place if report.place != -1 else "N/A", inline=False)
+        embed.add_field(name="Score", value=report.score, inline=False)
+        embed.add_field(name="Solves", value=report.solves, inline=False)
+
+        await interaction.followup.send(embed=embed, ephemeral=True)
+
 
 async def setup(bot) -> None:
     await bot.add_cog(CTF(bot))

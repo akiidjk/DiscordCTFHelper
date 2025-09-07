@@ -3,7 +3,8 @@ CREATE TABLE IF NOT EXISTS server (
   active_category_id INTEGER NOT NULL,
   archive_category_id INTEGER NOT NULL,
   role_manager_id INTEGER NOT NULL,
-  feed_channel_id INTEGER NOT NULL
+  feed_channel_id INTEGER NOT NULL,
+  team_id INTEGER NOT NULL
 );
 
 CREATE TABLE IF NOT EXISTS ctf (
@@ -15,8 +16,7 @@ CREATE TABLE IF NOT EXISTS ctf (
   event_id INTEGER NOT NULL,
   role_id INTEGER NOT NULL,
   msg_id INTEGER NOT NULL,
-  ctftime_url INTEGER NOT NULL,
-  team_name TEXT NOT NULL DEFAULT '',
+  ctftime_id INTEGER NOT NULL,
   FOREIGN KEY (server_id) REFERENCES server (id)
 );
 

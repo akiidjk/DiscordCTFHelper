@@ -2,6 +2,7 @@ import logging
 import os
 import platform
 import random
+import re
 import sys
 from pathlib import Path
 
@@ -97,12 +98,6 @@ class DiscordBot(commands.Bot):
         self.logger.info(f"Synced {len(synced)} commands: {', '.join([sync.name for sync in synced])}")
         self.status_task.start()
 
-    async def on_message(self, message: discord.Message) -> None:
-        """Handle incoming messages and process commands."""
-        if message.author == self.user or message.author.bot:
-            return
-        await self.process_commands(message)
-
     async def on_command_completion(self, context: Context) -> None:
         """Log successful command executions."""
         if not context.command:
@@ -190,7 +185,6 @@ class DiscordBot(commands.Bot):
             await user.remove_roles(role)
         else:
             logger.info(f"Role not found for CTF {ctf.name}")
-
 
 if __name__ == "__main__":
     load_dotenv()

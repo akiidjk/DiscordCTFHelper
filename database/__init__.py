@@ -14,8 +14,8 @@ class DatabaseManager:
         """
         await self.connection.execute(
             """INSERT INTO report
-            (ctf_id, position, solves)
-            VALUES (?, ?, ?)""",
+            (ctf_id, place, solves, score)
+            VALUES (?, ?, ?, ?)""",
             (
                 report.ctf_id,
                 report.place,
@@ -37,8 +37,8 @@ class DatabaseManager:
 
         """
         async with self.connection.execute(
-            """SELECT ctf_id, position, solves
-            FROM report""",
+            """SELECT ctf_id, place, solves, score
+            FROM report WHERE ctf_id = ?""",
             (ctf_id,),
         ) as cursor:
             row = await cursor.fetchone()
@@ -46,14 +46,39 @@ class DatabaseManager:
                 return None
             return ReportModel(*row)
 
+
+    async def update_report(self, ctf_id: int, report: ReportModel):
+        """
+        Update a report in the database. If it does not exist, create it.
+
+        Args:
+            ctf_id (int): The ID of the CTF.
+
+        Returns:
+            None
+
+        """
+        await self.connection.execute(
+                """UPDATE report
+                SET place = ?, solves = ?, score = ?
+                WHERE ctf_id = ?""",
+                (
+                    report.place,
+                    report.solves,
+                    report.score,
+                    ctf_id,
+                ),
+            )
+        await self.connection.commit()
+
     async def add_ctf(self, ctf: CTFModel) -> None:
         """
         Add a CTF to the database.
         """
         await self.connection.execute(
             """INSERT INTO ctf
-            (server_id, name, description, text_channel_id, event_id, role_id, msg_id, ctftime_url, team_name)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+            (server_id, name, description, text_channel_id, event_id, role_id, msg_id, ctftime_id)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
             (
                 ctf.server_id,
                 ctf.name,
@@ -63,7 +88,6 @@ class DatabaseManager:
                 ctf.role_id,
                 ctf.msg_id,
                 ctf.ctftime_id,
-                ctf.team_name,
             ),
         )
         await self.connection.commit()
@@ -104,7 +128,6 @@ class DatabaseManager:
                 role_id=row[6],
                 msg_id=row[7],
                 ctftime_id=row[8],
-                team_name=row[9],
             )
 
     async def get_ctf_by_id(self, id: int) -> CTFModel | None:
@@ -141,7 +164,6 @@ class DatabaseManager:
                 role_id=row[6],
                 msg_id=row[7],
                 ctftime_id=row[8],
-                team_name=row[9],
             )
 
     async def delete_ctf(self, id: int) -> bool:
@@ -201,7 +223,42 @@ class DatabaseManager:
                 role_id=row[6],
                 msg_id=row[7],
                 ctftime_id=row[8],
-                team_name=row[9],
+            )
+
+    async def get_ctf_by_channel_id(self, channel_id: int, server_id: int) -> CTFModel | None:
+        """
+        Get a CTF from the database.
+
+        Args:
+            channel_id (int): The text channel ID.
+            server_id (int): The server ID.
+
+        Returns:
+            Optional[CTFModel]: The CTF or None if not found.
+
+        """
+        async with self.connection.execute(
+            "SELECT * FROM ctf WHERE text_channel_id = ? AND server_id = ?",
+            (
+                channel_id,
+                server_id,
+            ),
+        ) as cursor:
+            row = await cursor.fetchone()
+            logger.debug(f"{row=}")
+            if row is None:
+                return None
+
+            return CTFModel(
+                id=row[0],
+                server_id=row[1],
+                name=row[2],
+                description=row[3],
+                text_channel_id=row[4],
+                event_id=row[5],
+                role_id=row[6],
+                msg_id=row[7],
+                ctftime_id=row[8],
             )
 
     async def is_ctf_present(self, name: str, server_id: int) -> bool:
@@ -240,13 +297,14 @@ class DatabaseManager:
         """
         try:
             await self.connection.execute(
-                "INSERT INTO server (id, active_category_id, archive_category_id, role_manager_id, feed_channel_id) VALUES (?,?,?,?,?)",
+                "INSERT INTO server (id, active_category_id, archive_category_id, role_manager_id, feed_channel_id,team_id) VALUES (?,?,?,?,?,?)",
                 (
                     server_model.id,
                     server_model.active_category_id,
                     server_model.archive_category_id,
                     server_model.role_manager_id,
                     server_model.feed_channel_id,
+                    server_model.team_id
                 ),
             )
             await self.connection.commit()
@@ -277,6 +335,7 @@ class DatabaseManager:
                 archive_category_id=row[2],
                 role_manager_id=row[3],
                 feed_channel_id=row[4],
+                team_id=row[5],
             )
 
     async def edit_category(self, server_model: ServerModel) -> bool:
@@ -359,7 +418,6 @@ class DatabaseManager:
                         role_id=row[6],
                         msg_id=row[7],
                         ctftime_id=row[8],
-                        team_name=row[9],
                     )
                 )
         return ctfs
