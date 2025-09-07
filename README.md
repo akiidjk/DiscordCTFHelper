@@ -64,7 +64,6 @@
 
    ```env
    TOKEN=<discord_token>
-   TEAM_NAME=<team_name>
    ```
 
 5. Run the bot:
