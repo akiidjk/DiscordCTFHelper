@@ -53,6 +53,7 @@ class DatabaseManager:
 
         Args:
             ctf_id (int): The ID of the CTF.
+            report (ReportModel): The report to update.
 
         Returns:
             None
@@ -130,7 +131,7 @@ class DatabaseManager:
                 ctftime_id=row[8],
             )
 
-    async def get_ctf_by_id(self, id: int) -> CTFModel | None:
+    async def get_ctf_by_id(self, ctf_id: int) -> CTFModel | None:
         """
         Get a CTF from the database.
 
@@ -141,11 +142,11 @@ class DatabaseManager:
             Optional[CTFModel]: The CTF or None if not found.
 
         """
-        logger.debug(f"{id=}")
+        logger.debug(f"{ctf_id=}")
         async with self.connection.execute(
             "SELECT * FROM ctf WHERE id = ?",
             (
-                id,
+                ctf_id,
             ),
         ) as cursor:
             row = await cursor.fetchone()
@@ -166,7 +167,7 @@ class DatabaseManager:
                 ctftime_id=row[8],
             )
 
-    async def delete_ctf(self, id: int) -> bool:
+    async def delete_ctf(self, ctf_id: int) -> bool:
         """
         Delete a CTF from the database.
 
@@ -180,7 +181,7 @@ class DatabaseManager:
         try:
             await self.connection.execute(
                 "DELETE FROM ctf WHERE id = ?",
-                (id,),
+                (ctf_id,),
             )
             await self.connection.commit()
         except aiosqlite.Error as e:

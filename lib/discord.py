@@ -1,13 +1,12 @@
 from datetime import UTC, datetime
 
-from discord import Embed, Member, Message, ScheduledEvent
+from discord import Embed, Member, Message, PermissionOverwrite, ScheduledEvent
 from discord.channel import CategoryChannel, TextChannel
 from discord.client import HTTPException
 from discord.colour import Color
 from discord.enums import EntityType, PrivacyLevel
 from discord.interactions import Interaction
 from discord.role import Role
-from discord import PermissionOverwrite
 
 from lib.logger import logger
 from lib.utils import get_logo

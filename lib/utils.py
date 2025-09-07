@@ -164,7 +164,7 @@ async def get_results_info(ctftime_id: int,year:int,team_id:int) -> dict | None:
         logger.debug(f"Response status code: {response.status}")
         if response.status == HTTP_STATUS_OK:
             response_data = await response.json()
-            response_data = response_data[ctftime_id]['scores']
+            response_data = response_data[ctftime_id]["scores"]
             for result in response_data:
                 if result["team_id"] == team_id:
                         return result

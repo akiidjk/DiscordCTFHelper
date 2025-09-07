@@ -1,14 +1,13 @@
-import os
 from datetime import datetime
 
 from discord import (
     CategoryChannel,
+    Color,
+    Embed,
     Interaction,
     Member,
     Role,
     TextChannel,
-    Embed,
-    Color,
     app_commands,
 )
 from discord.components import SelectOption
@@ -87,7 +86,7 @@ class CTF(commands.Cog, name="ctftime"):
     @app_commands.describe(
         id="The ID of the event",
     )
-    async def create(self, interaction: Interaction, id: int) -> None:
+    async def create(self, interaction: Interaction, ctftime_id: int) -> None:
         await interaction.response.defer(ephemeral=True)
 
         if not interaction.guild:
@@ -111,7 +110,7 @@ class CTF(commands.Cog, name="ctftime"):
 
         await check_permission(self,interaction)
 
-        data = await get_ctf_info(id)
+        data = await get_ctf_info(ctftime_id)
         if not data:
             await interaction.followup.send(
                 "Failed to get the information of the CTF. ❌",
@@ -191,7 +190,7 @@ class CTF(commands.Cog, name="ctftime"):
             event_id=events.id,
             role_id=role.id,
             msg_id=msg.id,
-            ctftime_id=id,
+            ctftime_id=ctftime_id,
         )
 
         await self.bot.database.add_ctf(ctf)
@@ -373,7 +372,7 @@ class CTF(commands.Cog, name="ctftime"):
         embed = Embed(
             title=f"Report for {ctf.name}",
             color=Color.blue(),
-            timestamp=datetime.utcnow(),
+            timestamp=datetime.now(),
         )
         embed.add_field(name="Place", value=report.place if report.place != -1 else "N/A", inline=False)
         embed.add_field(name="Score", value=report.score, inline=False)

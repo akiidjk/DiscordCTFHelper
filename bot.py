@@ -2,7 +2,6 @@ import logging
 import os
 import platform
 import random
-import re
 import sys
 from pathlib import Path
 
