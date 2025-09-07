@@ -13,7 +13,7 @@ class CTFModel:
     event_id: int
     role_id: int
     msg_id: int
-    ctftime_url: str
+    ctftime_id: int
     team_name: str
 
 

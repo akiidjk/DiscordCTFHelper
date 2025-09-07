@@ -74,7 +74,7 @@ class DiscordBot(commands.Bot):
             "Retrieving event details from CTFTime...",
             "Preparing for your next CTF event...",
         ]
-        await self.change_presence(activity=discord.Game(random.choice(statuses)))
+        await self.change_presence(activity=discord.Game(random.choice(statuses))) # noqa: S311
 
     @status_task.before_loop
     async def before_status_task(self) -> None:
@@ -95,6 +95,7 @@ class DiscordBot(commands.Bot):
         await self.init_db()
         synced = await self.tree.sync()
         self.logger.info(f"Synced {len(synced)} commands: {', '.join([sync.name for sync in synced])}")
+        self.status_task.start()
 
     async def on_message(self, message: discord.Message) -> None:
         """Handle incoming messages and process commands."""
@@ -117,71 +118,6 @@ class DiscordBot(commands.Bot):
             )
         else:
             self.logger.info(f"Executed {executed_command} command by {context.author} (ID: {context.author.id}) in DMs")
-
-    async def on_command_error(self, context: Context, error) -> None:
-        """Handle command errors with appropriate messages."""
-        if isinstance(error, commands.CommandOnCooldown):
-            minutes, seconds = divmod(error.retry_after, 60)
-            hours, minutes = divmod(minutes, 60)
-            hours = hours % 24
-
-            time_strings = []
-            if hours > 0:
-                time_strings.append(f"{round(hours)} hours")
-            if minutes > 0:
-                time_strings.append(f"{round(minutes)} minutes")
-            if seconds > 0:
-                time_strings.append(f"{round(seconds)} seconds")
-
-            time_string = " ".join(time_strings)
-
-            embed = discord.Embed(
-                description=f"**Please slow down** - You can use this command again in {time_string}.",
-                color=0xE02B2B,
-            )
-            if context.channel:
-                await context.send(embed=embed)
-
-        elif isinstance(error, commands.NotOwner):
-            embed = discord.Embed(description="You are not the owner of the bot!", color=0xE02B2B)
-            if context.channel:
-                await context.send(embed=embed)
-
-            if context.guild:
-                self.logger.warning(
-                    f"{context.author} (ID: {context.author.id}) tried to execute an owner only command in the guild {context.guild.name} (ID: {context.guild.id}), but the user is not an owner of the bot."
-                )
-            else:
-                self.logger.warning(
-                    f"{context.author} (ID: {context.author.id}) tried to execute an owner only command in the bot's DMs, but the user is not an owner of the bot."
-                )
-
-        elif isinstance(error, commands.MissingPermissions):
-            embed = discord.Embed(
-                description=f"You are missing the permission(s) `{', '.join(error.missing_permissions)}` to execute this command!",
-                color=0xE02B2B,
-            )
-            if context.channel:
-                await context.send(embed=embed)
-
-        elif isinstance(error, commands.BotMissingPermissions):
-            embed = discord.Embed(
-                description=f"I am missing the permission(s) `{', '.join(error.missing_permissions)}` to fully perform this command!",
-                color=0xE02B2B,
-            )
-            if context.channel:
-                await context.send(embed=embed)
-
-        elif isinstance(error, commands.MissingRequiredArgument):
-            embed = discord.Embed(
-                title="Error!",
-                description=str(error).capitalize(),
-                color=0xE02B2B,
-            )
-            if context.channel:
-                await context.send(embed=embed)
-        else:
-            raise error
 
     async def on_scheduled_event_update(self, before: ScheduledEvent, after: ScheduledEvent) -> None:
         """Handle Discord scheduled event updates."""

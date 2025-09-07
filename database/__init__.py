@@ -52,8 +52,8 @@ class DatabaseManager:
         """
         await self.connection.execute(
             """INSERT INTO ctf
-            (server_id, name, description, text_channel_id, event_id, role_id, msg_id, ctfd, ctftime_url, team_name)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+            (server_id, name, description, text_channel_id, event_id, role_id, msg_id, ctftime_url, team_name)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)""",
             (
                 ctf.server_id,
                 ctf.name,
@@ -62,7 +62,7 @@ class DatabaseManager:
                 ctf.event_id,
                 ctf.role_id,
                 ctf.msg_id,
-                ctf.ctftime_url,
+                ctf.ctftime_id,
                 ctf.team_name,
             ),
         )
@@ -103,7 +103,7 @@ class DatabaseManager:
                 event_id=row[5],
                 role_id=row[6],
                 msg_id=row[7],
-                ctftime_url=row[8],
+                ctftime_id=row[8],
                 team_name=row[9],
             )
 
@@ -140,7 +140,7 @@ class DatabaseManager:
                 event_id=row[5],
                 role_id=row[6],
                 msg_id=row[7],
-                ctftime_url=row[8],
+                ctftime_id=row[8],
                 team_name=row[9],
             )
 

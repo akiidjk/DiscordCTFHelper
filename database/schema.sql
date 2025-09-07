@@ -14,7 +14,7 @@ CREATE TABLE IF NOT EXISTS ctf (
   event_id INTEGER NOT NULL,
   role_id INTEGER NOT NULL,
   msg_id INTEGER NOT NULL,
-  ctftime_url TEXT NOT NULL,
+  ctftime_url INTEGER NOT NULL,
   team_name TEXT NOT NULL DEFAULT '',
   FOREIGN KEY (server_id) REFERENCES server (id)
 );

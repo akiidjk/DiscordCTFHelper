@@ -64,40 +64,23 @@ async def get_logo(url: str) -> bytes:
         return await default_img.read()
 
 
-def check_url(url: str) -> bool:
-    """
-    Check if the URL is a valid CTFTime URL.
-
-    Args:
-        url (str): The URL to check.
-
-    Returns:
-        bool: True if the URL is a valid CTFTime URL, False otherwise.
-
-    """
-    return bool(re.match(r"^https://ctftime.org/event/\d+$", url))
-
-
-async def get_ctf_info(url: str) -> dict | None:
+async def get_ctf_info(ctftime_id: int) -> dict | None:
     """
     Get the information of a CTF from ctftime.org.
 
     Args:
-        url (str): The URL of the CTF.
+        ctftime_id (int): The ID of the CTF.
 
     Returns:
         dict: The information of the CTF.
 
     """
-    if url.endswith("/"):
-        url = url.removesuffix("/")
-    id_event = url.split("/")[-1]
-    logger.debug(f"Getting information for event with ID {id_event}")
-    logger.debug(f"GET {BASE_URL}/events/{id_event}/")
+    logger.debug(f"Getting information for event with ID {ctftime_id}")
+    logger.debug(f"GET {BASE_URL}/events/{ctftime_id}/")
 
     async with (
         aiohttp.ClientSession() as session,
-        session.get(f"{BASE_URL}/events/{id_event}/", headers={"User-Agent": random.choice(USER_AGENT_LIST)}) as response,  # noqa: S311
+        session.get(f"{BASE_URL}/events/{ctftime_id}/", headers={"User-Agent": random.choice(USER_AGENT_LIST)}) as response,  # noqa: S311
     ):
         logger.debug(f"Response status code: {response.status}")
         response_text = await response.text()
