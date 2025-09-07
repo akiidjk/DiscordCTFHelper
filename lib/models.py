@@ -25,6 +25,7 @@ class ServerModel:
     active_category_id: int
     archive_category_id: int
     role_manager_id: int
+    feed_channel_id: int
 
 @dataclass(frozen=True)
 class ReportModel:

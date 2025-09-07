@@ -2,7 +2,8 @@ CREATE TABLE IF NOT EXISTS server (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   active_category_id INTEGER NOT NULL,
   archive_category_id INTEGER NOT NULL,
-  role_manager_id INTEGER NOT NULL
+  role_manager_id INTEGER NOT NULL,
+  feed_channel_id INTEGER NOT NULL
 );
 
 CREATE TABLE IF NOT EXISTS ctf (

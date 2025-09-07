@@ -107,6 +107,66 @@ class DatabaseManager:
                 team_name=row[9],
             )
 
+    async def get_ctf_by_id(self, id: int) -> CTFModel | None:
+        """
+        Get a CTF from the database.
+
+        Args:
+            id (int): The database id of the CTF.
+
+        Returns:
+            Optional[CTFModel]: The CTF or None if not found.
+
+        """
+        logger.debug(f"{id=}")
+        async with self.connection.execute(
+            "SELECT * FROM ctf WHERE id = ?",
+            (
+                id,
+            ),
+        ) as cursor:
+            row = await cursor.fetchone()
+            logger.debug(f"{row=}")
+
+            if row is None:
+                return None
+
+            return CTFModel(
+                id=row[0],
+                server_id=row[1],
+                name=row[2],
+                description=row[3],
+                text_channel_id=row[4],
+                event_id=row[5],
+                role_id=row[6],
+                msg_id=row[7],
+                ctftime_id=row[8],
+                team_name=row[9],
+            )
+
+    async def delete_ctf(self, id: int) -> bool:
+        """
+        Delete a CTF from the database.
+
+        Args:
+            id (int): The database id of the CTF.
+
+        Returns:
+            bool: True if the CTF was deleted, False otherwise.
+
+        """
+        try:
+            await self.connection.execute(
+                "DELETE FROM ctf WHERE id = ?",
+                (id,),
+            )
+            await self.connection.commit()
+        except aiosqlite.Error as e:
+            logger.error(f"Error: {e}")
+            return False
+        else:
+            return True
+
     async def get_ctf_by_message_id(self, message_id: int, server_id: int) -> CTFModel | None:
         """
         Get a CTF from the database.
@@ -180,12 +240,13 @@ class DatabaseManager:
         """
         try:
             await self.connection.execute(
-                "INSERT INTO server (id, active_category_id, archive_category_id, role_manager_id) VALUES (?,?,?,?)",
+                "INSERT INTO server (id, active_category_id, archive_category_id, role_manager_id, feed_channel_id) VALUES (?,?,?,?,?)",
                 (
                     server_model.id,
                     server_model.active_category_id,
                     server_model.archive_category_id,
                     server_model.role_manager_id,
+                    server_model.feed_channel_id,
                 ),
             )
             await self.connection.commit()
@@ -215,6 +276,7 @@ class DatabaseManager:
                 active_category_id=row[1],
                 archive_category_id=row[2],
                 role_manager_id=row[3],
+                feed_channel_id=row[4],
             )
 
     async def edit_category(self, server_model: ServerModel) -> bool:
@@ -266,3 +328,38 @@ class DatabaseManager:
             return False
         else:
             return True
+
+
+    async def get_ctfs_list(self, server_id: int) -> list[CTFModel]:
+        """
+        Get a list of CTFs from the database.
+
+        Args:
+            server_id (int): The server ID.
+
+        Returns:
+            list[CTFModel]: A list of CTFs.
+
+        """
+        ctfs: list[CTFModel] = []
+        async with self.connection.execute(
+            "SELECT * FROM ctf WHERE server_id = ?",
+            (server_id,),
+        ) as cursor:
+            rows = await cursor.fetchall()
+            for row in rows:
+                ctfs.append(
+                    CTFModel(
+                        id=row[0],
+                        server_id=row[1],
+                        name=row[2],
+                        description=row[3],
+                        text_channel_id=row[4],
+                        event_id=row[5],
+                        role_id=row[6],
+                        msg_id=row[7],
+                        ctftime_id=row[8],
+                        team_name=row[9],
+                    )
+                )
+        return ctfs

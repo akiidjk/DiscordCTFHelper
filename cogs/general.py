@@ -26,6 +26,8 @@ class General(commands.Cog, name="general"):
     @app_commands.command(name="help", description="List all commands the bot has loaded.")
     async def help(self, interaction: discord.Interaction) -> None:
         embed = discord.Embed(title="Help", description="List of available commands:", color=0xBEBEFE)
+        if not interaction.message:
+            return
         for cog_name, cog in self.bot.cogs.items():
             if cog_name.lower() == "owner" and not (await self.bot.is_owner(interaction.message.author)):
                 continue

@@ -1,12 +1,13 @@
 from datetime import UTC, datetime
 
-from discord import Embed, Message, ScheduledEvent
+from discord import Embed, Member, Message, ScheduledEvent
 from discord.channel import CategoryChannel, TextChannel
 from discord.client import HTTPException
 from discord.colour import Color
 from discord.enums import EntityType, PrivacyLevel
 from discord.interactions import Interaction
 from discord.role import Role
+from discord import PermissionOverwrite
 
 from lib.logger import logger
 from lib.utils import get_logo
@@ -80,23 +81,11 @@ async def create_events(
 
         return scheduled_event
 
-async def set_cat(self, server_id: int) -> bool:
-        try:
-            server = await self.bot.database.get_server_by_id(server_id)
-            logger.debug(f"{server=}")
-            if server:
-                self.category_active_id[server_id] = server.active_category_id
-                self.category_archived_id[server_id] = server.archive_category_id
-                self.role_manager_id[server_id] = server.role_manager_id
-                return True
-        except (HTTPException, AttributeError) as e:
-            logger.error(f"Error: {e}")
-        return False
-
 async def create_channel(
         interaction: Interaction,
         channel_name: str,
         category_id: int,
+        role_id: int,
     ) -> TextChannel | None:
         guild = interaction.guild
         if guild is None:
@@ -115,6 +104,20 @@ async def create_channel(
             )
             overwrites = category.overwrites
             await channel.edit(overwrites=overwrites)
+
+            overwrite = PermissionOverwrite()
+            overwrite.view_channel = False
+            await channel.set_permissions(guild.default_role,overwrite=overwrite)
+
+
+            role = guild.get_role(role_id)
+            if role is None:
+                await send_error(interaction, "role")
+                return None
+            overwrite = PermissionOverwrite()
+            overwrite.view_channel = True
+            overwrite.send_messages = True
+            await channel.set_permissions(role,overwrite=overwrite)
         except HTTPException as e:
             logger.error(f"Error: {e}")
             await interaction.followup.send(
@@ -158,7 +161,7 @@ async def create_embed(data: dict, start_time: datetime, end_time: datetime, cha
 
         msg = await channel.send(embed=embed)
         await msg.add_reaction("✅")
-        await msg.pin()
+        # await msg.pin()
         return msg
 
 async def create_role(interaction: Interaction, name: str) -> Role | None:
@@ -175,3 +178,14 @@ async def create_role(interaction: Interaction, name: str) -> Role | None:
             mentionable=True,
             hoist=True,
         )
+
+
+async def check_permission(self,interaction):
+    server = await self.bot.database.get_server_by_id(interaction.guild.id)
+    role_manager = interaction.guild.get_role(server.role_manager_id)
+    if not isinstance(interaction.user, Member) or not role_manager or role_manager not in interaction.user.roles:
+        await interaction.followup.send(
+            "You don't have the required role to run this command. ❌",
+            ephemeral=True,
+        )
+        return
