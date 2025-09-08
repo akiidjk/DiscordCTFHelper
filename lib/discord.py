@@ -85,6 +85,7 @@ async def create_channel(
         channel_name: str,
         category_id: int,
         role_id: int,
+        manager_id: int,
     ) -> TextChannel | None:
         guild = interaction.guild
         if guild is None:
@@ -100,14 +101,21 @@ async def create_channel(
             channel = await guild.create_text_channel(
                 name=channel_name,
                 category=category,
+
             )
-            overwrites = category.overwrites
-            await channel.edit(overwrites=overwrites)
+            await channel.edit(sync_permissions=False)
 
             overwrite = PermissionOverwrite()
             overwrite.view_channel = False
             await channel.set_permissions(guild.default_role,overwrite=overwrite)
 
+            manager = guild.get_role(manager_id)
+            if manager is None:
+                await send_error(interaction, "manager")
+                return None
+            overwrite = PermissionOverwrite()
+            overwrite.view_channel = False
+            await channel.set_permissions(manager,overwrite=overwrite)
 
             role = guild.get_role(role_id)
             if role is None:

@@ -84,7 +84,7 @@ class CTF(commands.Cog, name="ctftime"):
         description="Create a CTF event in the discord server.",
     )
     @app_commands.describe(
-        id="The ID of the event",
+        ctftime_id="The ID of the event",
     )
     async def create(self, interaction: Interaction, ctftime_id: int) -> None:
         await interaction.response.defer(ephemeral=True)
@@ -146,6 +146,7 @@ class CTF(commands.Cog, name="ctftime"):
             channel_name=data["title"],
             category_id=server.active_category_id,
             role_id=role.id,
+            manager_id=server.role_manager_id,
         )
 
         if not channel:
@@ -230,9 +231,27 @@ class CTF(commands.Cog, name="ctftime"):
                     )
                     return
 
+                server = await self.bot.database.get_server_by_id(interaction.guild.id)
+                if not server:
+                    await interaction.followup.send(
+                        "The server is not configured. ❌ Please run the /init command.",
+                        ephemeral=True,
+                    )
+                    return
+
+
                 channel = interaction.guild.get_channel(ctf_item.text_channel_id)
                 role = interaction.guild.get_role(ctf_item.role_id)
                 event = interaction.guild.get_scheduled_event(ctf_item.event_id)
+                feedChannel = interaction.guild.get_channel(server.feed_channel_id)
+
+                if feedChannel and isinstance(feedChannel, TextChannel):
+                    try:
+                        msg = await feedChannel.fetch_message(ctf_item.msg_id)
+                        if msg:
+                            await msg.delete()
+                    except Exception as e:
+                        logger.error(f"Failed to delete the message: {e}")
 
                 if channel:
                     try:

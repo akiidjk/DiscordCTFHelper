@@ -91,9 +91,11 @@ This project is licensed under the Apache License. See the [LICENSE](LICENSE.md)
 
 - [x] Add final scraping for team stats
 - [x] Add overall report generation
-- [ ] New handling of channel one channel only read width the banner show
-- [ ] Add notification for chall solve
-- [ ] Reaction cookie and fire too each flag
+- [x] New handling of channel one channel only read width the banner show
+- [x] Flag command
+- [x] Reaction cookie and fire too each flag
+- [x] Remove command
+- [ ] Creds command (command for store and show the creds of a ctf)
 
 ## Contact
 
