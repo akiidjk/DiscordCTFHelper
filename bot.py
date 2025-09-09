@@ -143,45 +143,54 @@ class DiscordBot(commands.Bot):
 
                 await channel.send(f"<@&{ctf.role_id}> The CTF **{ctf.name}** has ended! The channel has been moved to the archived category.")
 
-    async def on_reaction_add(self, reaction: discord.Reaction, user: discord.Member) -> None:
+    async def on_raw_reaction_add(self, payload: discord.RawReactionActionEvent) -> None:
         """Handle adding reactions to messages."""
-        if user.bot or not self.database:
+        if not self.database:
             return
 
-        self.logger.debug(f"{reaction=}, {user=}")
-
-        message = reaction.message
-        if not message.guild:
+        if payload.guild_id is None:
             return
 
-        ctf = await self.database.get_ctf_by_message_id(message.id, message.guild.id)
+        guild = self.get_guild(payload.guild_id)
+        if not guild or payload.member is None or payload.member.bot:
+            return
+
+        self.logger.debug(f"{payload=}, {payload.member=}")
+
+        message_id = payload.message_id
+        ctf = await self.database.get_ctf_by_message_id(message_id, guild.id)
         if ctf is None:
-            logger.info(f"CTF not found for message {message.id}")
+            logger.info(f"CTF not found for message {message_id}")
             return
 
-        role = message.guild.get_role(ctf.role_id)
+        role = guild.get_role(ctf.role_id)
         if role:
-            await user.add_roles(role)
+            await payload.member.add_roles(role)
 
-    async def on_reaction_remove(self, reaction: discord.Reaction, user: discord.Member) -> None:
+    async def on_raw_reaction_remove(self, payload: discord.RawReactionActionEvent) -> None:
         """Handle removing reactions from messages."""
-        if user.bot or not self.database:
-            return
+        print("AAAAAAAAAAAAAAAAAA")
+        if not self.database:
+          return
 
-        self.logger.debug(f"{reaction=}, {user=}")
+        if payload.guild_id is None:
+          return
 
-        message = reaction.message
-        if not message.guild:
-            return
+        guild = self.get_guild(payload.guild_id)
+        if not guild or payload.member is None or payload.member.bot:
+          return
 
-        ctf = await self.database.get_ctf_by_message_id(message.id, message.guild.id)
+        self.logger.debug(f"{payload=}, {payload.member=}")
+
+        message_id = payload.message_id
+        ctf = await self.database.get_ctf_by_message_id(message_id, guild.id)
         if ctf is None:
-            logger.info(f"CTF not found for message {message.id}")
-            return
+          logger.info(f"CTF not found for message {message_id}")
+          return
 
-        role = message.guild.get_role(ctf.role_id)
+        role = guild.get_role(ctf.role_id)
         if role:
-            await user.remove_roles(role)
+            await payload.member.remove_roles(role)
         else:
             logger.info(f"Role not found for CTF {ctf.name}")
 
