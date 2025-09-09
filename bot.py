@@ -169,7 +169,6 @@ class DiscordBot(commands.Bot):
 
     async def on_raw_reaction_remove(self, payload: discord.RawReactionActionEvent) -> None:
         """Handle removing reactions from messages."""
-        print("AAAAAAAAAAAAAAAAAA")
         if not self.database:
           return
 
