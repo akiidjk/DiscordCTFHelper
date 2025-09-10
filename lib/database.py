@@ -1,3 +1,4 @@
+from lib.models import Creds
 import aiosqlite
 
 from lib.logger import logger
@@ -7,6 +8,69 @@ from lib.models import CTFModel, ReportModel, ServerModel
 class DatabaseManager:
     def __init__(self, *, connection: aiosqlite.Connection) -> None:
         self.connection = connection
+
+    async def add_creds(self, username: str, password: str, personal: bool, ctf_id: int) -> None:
+        """
+        Add or update credentials in the database.
+        If credentials with the same ctf_id exist, update them; otherwise, insert new ones.
+        """
+        async with self.connection.execute(
+            """SELECT 1 FROM creds WHERE ctf_id = ?""",
+            (ctf_id,),
+        ) as cursor:
+            row = await cursor.fetchone()
+
+        if row:
+            await self.connection.execute(
+                """UPDATE creds
+                SET username = ?, password = ?, personal = ?
+                WHERE ctf_id = ?""",
+                (
+                    username,
+                    password,
+                    personal,
+                    ctf_id,
+                ),
+            )
+        else:
+            await self.connection.execute(
+                """INSERT INTO creds
+                (username, password, personal, ctf_id)
+                VALUES (?, ?, ?, ?)""",
+                (
+                    username,
+                    password,
+                    personal,
+                    ctf_id,
+                ),
+            )
+        await self.connection.commit()
+
+    async def get_creds(self, ctf_id: int):
+        """
+        Get credentials from the database.
+
+        Args:
+            ctf_id (int): The ID of the CTF.
+        Returns:
+            list[tuple[str, str]]: A list of tuples containing the username and password.
+        """
+        creds = []
+        async with self.connection.execute(
+            """SELECT username, password, personal
+            FROM creds WHERE ctf_id = ?""",
+            (ctf_id,),
+        ) as cursor:
+            rows = await cursor.fetchall()
+            for row in rows:
+                creds.append(Creds(
+                    id=0,
+                    ctf_id=ctf_id,
+                    username=row[0],
+                    password=row[1],
+                    personal=bool(row[2]),
+                ))
+        return creds
 
     async def add_report(self, report: ReportModel) -> None:
         """

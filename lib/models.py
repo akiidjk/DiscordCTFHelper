@@ -36,3 +36,13 @@ class ReportModel:
     place: int
     solves: int
     score: int
+
+@dataclass(frozen=True)
+class Creds:
+    """Credentials model class"""
+
+    id: int
+    ctf_id: int
+    username: str
+    password: str
+    personal: bool

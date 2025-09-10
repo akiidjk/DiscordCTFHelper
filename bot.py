@@ -18,7 +18,7 @@ from discord.ext import commands, tasks
 from discord.ext.commands import Context
 from dotenv import load_dotenv
 
-from database import DatabaseManager
+from lib.database import DatabaseManager
 from lib.logger import init_logger, logger
 
 intents = discord.Intents.all()
@@ -44,7 +44,7 @@ class DiscordBot(commands.Bot):
 
     async def init_db(self) -> None:
         db_path = Path(__file__).parent / "database" / "database.db"
-        schema_path = Path(__file__).parent / "database" / "schema.sql"
+        schema_path = Path(__file__).parent / "schema.sql"
         async with aiosqlite.connect(str(db_path)) as db:
             async with aiofiles.open(schema_path) as file:
                 script = await file.read()

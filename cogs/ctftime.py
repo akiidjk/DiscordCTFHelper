@@ -9,18 +9,44 @@ from discord import (
     Role,
     TextChannel,
     app_commands,
+    ui,
 )
 from discord.components import SelectOption
 from discord.ext import commands
 from discord.ui.select import Select
 from discord.ui.view import View
 
+from lib.database import DatabaseManager
 from lib.discord import check_permission, create_channel, create_embed, create_events, create_role, send_error
 from lib.logger import logger
 from lib.models import CTFModel, ReportModel, ServerModel
 from lib.utils import get_ctf_info, get_results_info, sanitize_input
 
 MAX_DESC_LENGTH = 997
+
+
+class FormCreds(ui.Modal, title='Credentials Form'):
+    def __init__(self, db: DatabaseManager, ctf_id: int):
+        super().__init__()
+        self.db = db
+        self.ctf_id = ctf_id
+
+        self.username = ui.TextInput(label="Username", placeholder="Enter the username", required=True, max_length=32)
+        self.password = ui.TextInput(label="Password", placeholder="Enter the password", required=True, max_length=32)
+        self.personal = ui.TextInput(label="Is it personal?", placeholder="yes/no", required=True, max_length=3)
+
+        self.add_item(self.username)
+        self.add_item(self.password)
+        self.add_item(self.personal)
+
+    async def on_submit(self, interaction: Interaction) -> None:
+        await self.db.add_creds(
+            ctf_id=self.ctf_id,
+            username=self.username.value,
+            password=self.password.value,
+            personal=(self.personal.value == "yes")
+        )
+        await interaction.response.send_message(f'Thank you for submitting the credentials, {interaction.user.name}!', ephemeral=True)
 
 
 class CTF(commands.Cog, name="ctftime"):
@@ -399,6 +425,56 @@ class CTF(commands.Cog, name="ctftime"):
 
         await interaction.followup.send(embed=embed, ephemeral=True)
 
+
+
+
+    @app_commands.command(
+        name="creds",
+        description="Setup creds for the ctf",
+    )
+    @app_commands.describe(
+        create="Show the credentials (ephemeral message)"
+    )
+    async def creds(self, interaction: Interaction, create: bool) -> None:
+        if not interaction.guild:
+            await send_error(interaction, "guild")
+            return
+
+        if not isinstance(interaction.user, Member):
+            await send_error(interaction, "member")
+            return
+
+        ctf = await self.bot.database.get_ctf_by_channel_id(interaction.channel_id, interaction.guild.id)
+        if not ctf:
+            await interaction.response.send_message(
+                "No CTFs are currently active in this channel. ❌",
+                ephemeral=True,
+            )
+            return
+
+        if create:
+            await interaction.response.send_modal(FormCreds(self.bot.database, ctf.id))
+        else:
+            creds = await self.bot.database.get_creds(ctf.id)
+            if not creds:
+                await interaction.response.send_message(
+                    "No credentials are available for this CTF. ❌",
+                    ephemeral=True,
+                )
+                return
+
+            description = ""
+            for cred in creds:
+                description += f"**Username:** `{cred.username}`\n**Password:** `{cred.password}`\n**Need personal:** {'Yes' if cred.personal else '*No*'}\n\n"
+
+            embed = Embed(
+                title=f"Credentials for {ctf.name}",
+                description=description,
+                color=Color.green(),
+                timestamp=datetime.now(),
+            )
+
+            await interaction.response.send_message(embed=embed, ephemeral=True)
 
 async def setup(bot) -> None:
     await bot.add_cog(CTF(bot))
