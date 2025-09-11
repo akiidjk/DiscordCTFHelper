@@ -33,7 +33,7 @@ class FormCreds(ui.Modal, title='Credentials Form'):
 
         self.username = ui.TextInput(label="Username", placeholder="Enter the username", required=True, max_length=32)
         self.password = ui.TextInput(label="Password", placeholder="Enter the password", required=True, max_length=32)
-        self.personal = ui.TextInput(label="Is it personal?", placeholder="yes/no", required=True, max_length=3)
+        self.personal = ui.TextInput(label="Need personal account", placeholder="yes/no", required=True, max_length=3)
 
         self.add_item(self.username)
         self.add_item(self.password)
@@ -319,9 +319,10 @@ class CTF(commands.Cog, name="ctftime"):
         description="Register a flag in the ctf.",
     )
     @app_commands.describe(
-        flag="the flag"
+        flag="the flag",
+        challenge_name="the challenge name (optional)"
     )
-    async def flag(self, interaction: Interaction, flag: str) -> None:
+    async def flag(self, interaction: Interaction, flag: str, challenge_name: str = "") -> None:
         await interaction.response.defer(ephemeral=True)
 
         if not interaction.guild:
@@ -358,7 +359,10 @@ class CTF(commands.Cog, name="ctftime"):
             ))
 
         if isinstance(interaction.channel, TextChannel):
-            msg = await interaction.channel.send(f"<@&{ctf.role_id}> NEW FLAG FOUND by {interaction.user.mention}! 🎉\n> `{flag}`")
+            if challenge_name:
+                msg = await interaction.channel.send(f"<@&{ctf.role_id}> NEW FLAG FOUND by {interaction.user.mention}! for `{challenge_name}` 🎉\n> `{flag}`")
+            else:
+                msg = await interaction.channel.send(f"<@&{ctf.role_id}> NEW FLAG FOUND by {interaction.user.mention}! 🎉\n> `{flag}`")
             await msg.add_reaction("🔥")
         else:
             await interaction.followup.send(
@@ -432,10 +436,7 @@ class CTF(commands.Cog, name="ctftime"):
         name="creds",
         description="Setup creds for the ctf",
     )
-    @app_commands.describe(
-        create="Show the credentials (ephemeral message)"
-    )
-    async def creds(self, interaction: Interaction, create: bool) -> None:
+    async def creds(self, interaction: Interaction) -> None:
         if not interaction.guild:
             await send_error(interaction, "guild")
             return
@@ -452,17 +453,10 @@ class CTF(commands.Cog, name="ctftime"):
             )
             return
 
-        if create:
+        creds = await self.bot.database.get_creds(ctf.id)
+        if not creds:
             await interaction.response.send_modal(FormCreds(self.bot.database, ctf.id))
         else:
-            creds = await self.bot.database.get_creds(ctf.id)
-            if not creds:
-                await interaction.response.send_message(
-                    "No credentials are available for this CTF. ❌",
-                    ephemeral=True,
-                )
-                return
-
             description = ""
             for cred in creds:
                 description += f"**Username:** `{cred.username}`\n**Password:** `{cred.password}`\n**Need personal:** {'Yes' if cred.personal else '*No*'}\n\n"
@@ -475,6 +469,44 @@ class CTF(commands.Cog, name="ctftime"):
             )
 
             await interaction.response.send_message(embed=embed, ephemeral=True)
+
+
+    @app_commands.command(
+        name="delete-creds",
+        description="Delete the creds for the ctf",
+    )
+    async def delete_creds(self, interaction: Interaction) -> None:
+        if not interaction.guild:
+            await send_error(interaction, "guild")
+            return
+
+        if not isinstance(interaction.user, Member):
+            await send_error(interaction, "member")
+            return
+
+        ctf = await self.bot.database.get_ctf_by_channel_id(interaction.channel_id, interaction.guild.id)
+        if not ctf:
+            await interaction.response.send_message(
+                "No CTFs are currently active in this channel. ❌",
+                ephemeral=True,
+            )
+            return
+
+
+        creds = await self.bot.database.get_creds(ctf.id)
+        if not creds:
+            await interaction.response.send_message(
+                "No credentials are available for this CTF. ❌",
+                ephemeral=True,
+            )
+            return
+
+        if(await self.bot.database.delete_creds(ctf.id)):
+            await interaction.response.send_message("Credential removed correctly ✅", ephemeral=True)
+        else:
+            await interaction.response.send_message("Failed to remove the credentials ❌", ephemeral=True)
+
+        return
 
 async def setup(bot) -> None:
     await bot.add_cog(CTF(bot))

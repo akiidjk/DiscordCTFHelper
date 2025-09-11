@@ -46,6 +46,27 @@ class DatabaseManager:
             )
         await self.connection.commit()
 
+    async def delete_creds(self, ctf_id: int) -> bool:
+        """
+        Delete credentials from the database.
+
+        Args:
+            ctf_id (int): The ID of the CTF.
+        Returns:
+            bool: True if the credentials were deleted, False otherwise.
+        """
+        try:
+            await self.connection.execute(
+                "DELETE FROM creds WHERE ctf_id = ?",
+                (ctf_id,),
+            )
+            await self.connection.commit()
+        except aiosqlite.Error as e:
+            logger.error(f"Error: {e}")
+            return False
+        else:
+            return True
+
     async def get_creds(self, ctf_id: int):
         """
         Get credentials from the database.

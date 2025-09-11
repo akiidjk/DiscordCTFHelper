@@ -141,7 +141,7 @@ def get_categories(solves: list[dict]) -> list[str]:
     return list({solve["challenge"]["category"] for solve in solves})
 
 
-async def get_results_info(ctftime_id: int,year:int,team_id:int) -> dict | None:
+async def get_results_info(ctftime_id: int, year: int, team_id: int) -> dict | None:
     """
     Get the results information of a CTF from ctftime.org.
 
@@ -157,16 +157,19 @@ async def get_results_info(ctftime_id: int,year:int,team_id:int) -> dict | None:
     logger.debug(f"Getting results for event with ID {ctftime_id}")
     logger.debug(f"GET {BASE_URL}/results/{year}")
 
-    async with (
-        aiohttp.ClientSession() as session,
-        session.get(f"{BASE_URL}/results/{year}/", headers={"User-Agent": random.choice(USER_AGENT_LIST)}) as response,  # noqa: S311
-    ):
-        logger.debug(f"Response status code: {response.status}")
-        if response.status == HTTP_STATUS_OK:
-            response_data = await response.json()
-            response_data = response_data[ctftime_id]["scores"]
-            for result in response_data:
-                if result["team_id"] == team_id:
+    try:
+        async with (
+            aiohttp.ClientSession() as session,
+            session.get(f"{BASE_URL}/results/{year}/", headers={"User-Agent": random.choice(USER_AGENT_LIST)}) as response,  # noqa: S311
+        ):
+            logger.debug(f"Response status code: {response.status}")
+            if response.status == HTTP_STATUS_OK:
+                response_data = await response.json()
+                response_data = response_data[ctftime_id]["scores"]
+                for result in response_data:
+                    if result["team_id"] == team_id:
                         return result
-        logger.error(f"Failed to retrieve CTF results information. Status code: {response.status}")
-        return None
+            logger.error(f"Failed to retrieve CTF results information. Status code: {response.status}")
+    except (KeyError, aiohttp.ClientError, ValueError) as e:
+        logger.error(f"Error while retrieving CTF results information: {e}")
+    return None
