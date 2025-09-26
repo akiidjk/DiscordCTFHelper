@@ -31,8 +31,8 @@ class FormCreds(ui.Modal, title='Credentials Form'):
         self.db = db
         self.ctf_id = ctf_id
 
-        self.username = ui.TextInput(label="Username", placeholder="Enter the username", required=True, max_length=32)
-        self.password = ui.TextInput(label="Password", placeholder="Enter the password", required=True, max_length=32)
+        self.username = ui.TextInput(label="Username", placeholder="Enter the username", required=True, max_length=256)
+        self.password = ui.TextInput(label="Password", placeholder="Enter the password", required=True)
         self.personal = ui.TextInput(label="Need personal account", placeholder="yes/no", required=True, max_length=3)
 
         self.add_item(self.username)
