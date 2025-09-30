@@ -16,6 +16,8 @@ from discord import (
 )
 from discord.ext import commands, tasks
 from discord.ext.commands import Context
+from discord.member import Member
+from discord.message import Message
 from dotenv import load_dotenv
 
 from lib.database import DatabaseManager
@@ -113,6 +115,15 @@ class DiscordBot(commands.Bot):
         else:
             self.logger.info(f"Executed {executed_command} command by {context.author} (ID: {context.author.id}) in DMs")
 
+
+    async def on_message(self,message: Message):
+        cookie = discord.utils.get(bot.emojis, name="cookie~1")
+        if message.is_system() and message.type == discord.MessageType.new_member:
+            if cookie:
+                await message.add_reaction(cookie)
+            else:
+                await message.add_reaction("🍪")
+
     async def on_scheduled_event_update(self, before: ScheduledEvent, after: ScheduledEvent) -> None:
         """Handle Discord scheduled event updates."""
         if not self.database or not after.guild:
@@ -192,6 +203,7 @@ class DiscordBot(commands.Bot):
             await payload.member.remove_roles(role)
         else:
             logger.info(f"Role not found for CTF {ctf.name}")
+
 
 if __name__ == "__main__":
     load_dotenv()
