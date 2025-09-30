@@ -561,7 +561,7 @@ class CTF(commands.Cog, name="ctftime"):
         limit="The maximum number of CTFs to display (default: 100, max:100)"
     )
     async def next_ctf(self, interaction: Interaction, ephemeral: bool = True, limit: int = 5) -> None:
-        await interaction.response.defer(ephemeral=True)
+        await interaction.response.defer(ephemeral=ephemeral)
 
         if not interaction.guild:
             await send_error(interaction, "guild")
