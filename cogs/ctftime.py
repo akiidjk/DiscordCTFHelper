@@ -586,8 +586,6 @@ class CTF(commands.Cog, name="ctftime"):
             if start_raw:
                 try:
                     start_dt = datetime.fromisoformat(start_raw)
-                    # Discord timestamp format: <t:unix[:style]>
-                    # We'll use <t:TIMESTAMP:f> for full date/time, and <t:TIMESTAMP:R> for relative
                     start = f"<t:{int(start_dt.timestamp())}:F> (<t:{int(start_dt.timestamp())}:R>)"
                 except Exception:
                     start = str(start_raw)
@@ -623,7 +621,7 @@ class CTF(commands.Cog, name="ctftime"):
             color=Color.blue(),
             timestamp=datetime.now(),
         )
-        embed.set_footer(text=f"Totale: {len(data_list)} CTF disponibili")
+        embed.set_footer(text=f"Total: {len(data_list)} available CTFs")
 
         await interaction.followup.send(embed=embed, ephemeral=ephemeral)
 
