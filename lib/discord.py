@@ -2,7 +2,7 @@ from datetime import UTC, datetime
 
 from discord import Embed, Member, Message, PermissionOverwrite, ScheduledEvent
 from discord.channel import CategoryChannel, TextChannel
-from discord.client import HTTPException
+from discord.client import Client, HTTPException
 from discord.colour import Color
 from discord.enums import EntityType, PrivacyLevel
 from discord.interactions import Interaction
@@ -135,7 +135,7 @@ async def create_channel(
         else:
             return channel
 
-async def create_embed(data: dict, start_time: datetime, end_time: datetime, channel: TextChannel) -> Message:
+async def create_embed(data, start_time: datetime, end_time: datetime, channel: TextChannel) -> Message:
         description = f"""
 **Description:**
 
@@ -187,7 +187,7 @@ async def create_role(interaction: Interaction, name: str) -> Role | None:
         )
 
 
-async def check_permission(self,interaction):
+async def check_permission(self, interaction: Interaction[Client]) -> None:
     server = await self.bot.database.get_server_by_id(interaction.guild.id)
     role_manager = interaction.guild.get_role(server.role_manager_id)
     if not isinstance(interaction.user, Member) or not role_manager or role_manager not in interaction.user.roles:

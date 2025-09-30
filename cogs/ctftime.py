@@ -373,6 +373,50 @@ class CTF(commands.Cog, name="ctftime"):
         await interaction.followup.send("Flag registered successfully ✅", ephemeral=True)
 
 
+    @app_commands.command(
+        name="delete-flag",
+        description="Delete a flag in the ctf.",
+    )
+    async def delete_flag(self, interaction: Interaction) -> None:
+        await interaction.response.defer(ephemeral=True)
+
+        if not interaction.guild:
+            await send_error(interaction, "guild")
+            return
+
+        if not isinstance(interaction.user, Member):
+            await send_error(interaction, "member")
+            return
+
+        ctf = await self.bot.database.get_ctf_by_channel_id(interaction.channel_id, interaction.guild.id)
+        if not ctf:
+            await interaction.followup.send(
+                "No CTFs are currently active in channel. ❌",
+                ephemeral=True,
+            )
+            return
+
+        await check_permission(self,interaction)
+
+        if isinstance(interaction.channel, TextChannel):
+            try:
+                report = await self.bot.database.get_report(ctf.id)
+                if report and report.solves > 0:
+                    await self.bot.database.update_report(ctf.id,ReportModel(
+                        ctf_id=ctf.id,
+                        place=report.place,
+                        score=report.score,
+                        solves= report.solves - 1
+                    ))
+                await interaction.followup.send("Flag deleted successfully ✅", ephemeral=True)
+            except Exception as e:
+                logger.error(f"Failed to delete the message: {e}")
+                await interaction.followup.send("Failed to delete the message ❌", ephemeral=True)
+        else:
+            await interaction.followup.send(
+                "Unable to delete the flag in this channel type. ❌",
+                        ephemeral=True,
+            )
 
     @app_commands.command(
         name="report",
