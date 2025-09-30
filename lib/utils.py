@@ -1,3 +1,4 @@
+import datetime
 import io
 import random
 import re
@@ -89,6 +90,38 @@ async def get_ctf_info(ctftime_id: int) -> dict | None:
         if response.status == HTTP_STATUS_OK:
             return await response.json()
         logger.error(f"Failed to retrieve CTF information. Status code: {response.status}")
+        return None
+
+async def get_ctfs() -> list[dict] | None:
+    """
+    Get the list of CTFs from ctftime.org.
+
+    Returns:
+        list[dict]: The list of CTFs.
+
+    """
+    logger.debug("Getting list of CTFs")
+    logger.debug(f"GET {BASE_URL}/events/")
+
+    async with (
+        aiohttp.ClientSession() as session,
+        session.get(
+            f"{BASE_URL}/events/",
+            headers={"User-Agent": random.choice(USER_AGENT_LIST)},
+            params={
+                "limit": 10,
+                "start": int(datetime.datetime.now(datetime.UTC).timestamp()),
+                "finish": int((datetime.datetime.now(datetime.UTC) + datetime.timedelta(days=30)).timestamp()),
+            },
+        ) as response,
+    ):
+        logger.debug(f"Response status code: {response.status}")
+        response_text = await response.text()
+        logger.debug(f"Response data: {response_text}")
+
+        if response.status == HTTP_STATUS_OK:
+            return await response.json()
+        logger.error(f"Failed to retrieve CTFs. Status code: {response.status}")
         return None
 
 

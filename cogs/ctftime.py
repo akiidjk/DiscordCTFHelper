@@ -1,4 +1,5 @@
 from datetime import datetime
+from pprint import pprint
 
 from discord import (
     CategoryChannel,
@@ -20,7 +21,7 @@ from lib.database import DatabaseManager
 from lib.discord import check_permission, create_channel, create_embed, create_events, create_role, send_error
 from lib.logger import logger
 from lib.models import CTFModel, ReportModel, ServerModel
-from lib.utils import get_ctf_info, get_results_info, sanitize_input
+from lib.utils import get_ctf_info, get_ctfs, get_results_info, sanitize_input
 
 MAX_DESC_LENGTH = 997
 
@@ -514,7 +515,6 @@ class CTF(commands.Cog, name="ctftime"):
 
             await interaction.response.send_message(embed=embed, ephemeral=True)
 
-
     @app_commands.command(
         name="delete-creds",
         description="Delete the creds for the ctf",
@@ -551,6 +551,81 @@ class CTF(commands.Cog, name="ctftime"):
             await interaction.response.send_message("Failed to remove the credentials ❌", ephemeral=True)
 
         return
+
+    @app_commands.command(
+        name="next-ctf",
+        description="List the next ctf.",
+    )
+    @app_commands.describe(
+        ephemeral="Whether the response should be ephemeral or not (default: True)",
+        limit="The maximum number of CTFs to display (default: 100, max:100)"
+    )
+    async def next_ctf(self, interaction: Interaction, ephemeral: bool = True, limit: int = 5) -> None:
+        await interaction.response.defer(ephemeral=True)
+
+        if not interaction.guild:
+            await send_error(interaction, "guild")
+            return
+
+        data_list = await get_ctfs()
+        if not data_list or len(data_list) == 0:
+            await interaction.followup.send("No CTFs found.", ephemeral=True)
+            return
+
+        if limit < 1 or limit > 10:
+            limit = 5
+
+        # Build a list of CTFs with required fields
+        lines = []
+        logger.debug(f"Preparing to list up to {limit} CTFs")
+        logger.debug(f"Data list length: {len(data_list)}")
+        for idx, ctf in enumerate(data_list[:limit], 1):
+            ctf_id = ctf.get("id", "N/A")
+            title = ctf.get("title", "N/A")
+            start_raw = ctf.get("start", None)
+            if start_raw:
+                try:
+                    start_dt = datetime.fromisoformat(start_raw)
+                    # Discord timestamp format: <t:unix[:style]>
+                    # We'll use <t:TIMESTAMP:f> for full date/time, and <t:TIMESTAMP:R> for relative
+                    start = f"<t:{int(start_dt.timestamp())}:F> (<t:{int(start_dt.timestamp())}:R>)"
+                except Exception:
+                    start = str(start_raw)
+            else:
+                start = "N/A"
+            ctftime_url = ctf.get("ctftime_url", "N/A")
+            duration = ctf.get("duration", {})
+            duration_str = f"{duration.get('days', 0)}d {duration.get('hours', 0)}h"
+            weight = ctf.get("weight", "N/A")
+            onsite = "🏢 Onsite" if ctf.get("onsite", False) else "🌐 Online"
+            format_type = ctf.get("format", "N/A")
+
+            # Emoji per il formato
+            format_emoji = {
+                "Jeopardy": "🎯",
+                "Attack-Defense": "⚔️",
+                "Mixed": "🔀"
+            }.get(format_type, "📋")
+
+            # Link formattato
+            link = f"[CTFtime]({ctftime_url})" if ctftime_url != "N/A" else "N/A"
+
+            lines.append(
+                f"### {idx} • {title}\n"
+                f"🆔 `{ctf_id}` • ⚖️ **Weight:** `{weight}` • 📍 **Location:** {onsite}\n"
+                f"📅 **Start:** {start} • ⏱️ **Duration:** `{duration_str}`\n"
+                f"{format_emoji} **Format:** {format_type} • 🔗 **Link:** {link}\n"
+            )
+
+        embed = Embed(
+            title="📋 Prossimi CTF",
+            description="\n".join(lines),
+            color=Color.blue(),
+            timestamp=datetime.now(),
+        )
+        embed.set_footer(text=f"Totale: {len(data_list)} CTF disponibili")
+
+        await interaction.followup.send(embed=embed, ephemeral=ephemeral)
 
 async def setup(bot) -> None:
     await bot.add_cog(CTF(bot))
