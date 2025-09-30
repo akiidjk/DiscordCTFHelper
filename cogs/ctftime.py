@@ -618,7 +618,7 @@ class CTF(commands.Cog, name="ctftime"):
             )
 
         embed = Embed(
-            title="📋 Prossimi CTF",
+            title="📋 Next CTFs",
             description="\n".join(lines),
             color=Color.blue(),
             timestamp=datetime.now(),
