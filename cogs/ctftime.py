@@ -553,8 +553,8 @@ class CTF(commands.Cog, name="ctftime"):
         return
 
     @app_commands.command(
-        name="next-ctf",
-        description="List the next ctf.",
+        name="next-ctfs",
+        description="List the next ctfs on ctftime.",
     )
     @app_commands.describe(
         ephemeral="Whether the response should be ephemeral or not (default: True)",
