@@ -1,5 +1,4 @@
 from datetime import datetime
-from pprint import pprint
 
 from discord import (
     CategoryChannel,
@@ -26,7 +25,7 @@ from lib.utils import get_ctf_info, get_ctfs, get_results_info, sanitize_input
 MAX_DESC_LENGTH = 997
 
 
-class FormCreds(ui.Modal, title='Credentials Form'):
+class FormCreds(ui.Modal, title="Credentials Form"):
     def __init__(self, db: DatabaseManager, ctf_id: int):
         super().__init__()
         self.db = db
@@ -42,12 +41,9 @@ class FormCreds(ui.Modal, title='Credentials Form'):
 
     async def on_submit(self, interaction: Interaction) -> None:
         await self.db.add_creds(
-            ctf_id=self.ctf_id,
-            username=self.username.value,
-            password=self.password.value,
-            personal=(self.personal.value == "yes")
+            ctf_id=self.ctf_id, username=self.username.value, password=self.password.value, personal=(self.personal.value == "yes")
         )
-        await interaction.response.send_message(f'Thank you for submitting the credentials, {interaction.user.name}!', ephemeral=True)
+        await interaction.response.send_message(f"Thank you for submitting the credentials, {interaction.user.name}!", ephemeral=True)
 
 
 class CTF(commands.Cog, name="ctftime"):
@@ -64,6 +60,7 @@ class CTF(commands.Cog, name="ctftime"):
         role_manager="The only role that can run the create_ctf command",
         feed_channel="The channel feed for publish the ctf",
         team_id="The id of the team",
+        role_team_id="The role id of the team for tagging purposes",
     )
     async def init(
         self,
@@ -73,6 +70,7 @@ class CTF(commands.Cog, name="ctftime"):
         role_manager: Role,
         feed_channel: TextChannel,
         team_id: int,
+        role_team_id: Role
     ) -> None:
         await interaction.response.defer(ephemeral=True)
 
@@ -97,7 +95,8 @@ class CTF(commands.Cog, name="ctftime"):
                 archive_category_id=category_archived.id,
                 role_manager_id=role_manager.id,
                 feed_channel_id=feed_channel.id,
-                team_id=team_id
+                team_id=team_id,
+                role_team_id=role_team_id.id,
             )
         )
 
@@ -130,12 +129,12 @@ class CTF(commands.Cog, name="ctftime"):
 
         if not server.active_category_id or not server.role_manager_id:
             await interaction.followup.send(
-                    "Failed to set the category. ❌ Please check the configuration or contact support.",
-                    ephemeral=True,
-                )
+                "Failed to set the category. ❌ Please check the configuration or contact support.",
+                ephemeral=True,
+            )
             return
 
-        await check_permission(self,interaction)
+        await check_permission(self, interaction)
 
         data = await get_ctf_info(ctftime_id)
         if not data:
@@ -158,7 +157,6 @@ class CTF(commands.Cog, name="ctftime"):
             )
             return
 
-
         role = await create_role(
             interaction=interaction,
             name=data["title"],
@@ -166,7 +164,6 @@ class CTF(commands.Cog, name="ctftime"):
 
         if not role:
             return
-
 
         channel = await create_channel(
             interaction=interaction,
@@ -185,7 +182,7 @@ class CTF(commands.Cog, name="ctftime"):
             await interaction.followup.send(
                 "The feed channel is not a valid text channel. ❌",
                 ephemeral=True,
-                )
+            )
             return
 
         msg = await create_embed(
@@ -222,6 +219,11 @@ class CTF(commands.Cog, name="ctftime"):
         )
 
         await self.bot.database.add_ctf(ctf)
+
+        team_role = interaction.guild.get_role(server.role_team_id)
+        if team_role:
+            await interaction.channel.send(f"{team_role.mention} New CTF published in {feed_channel.mention} go to check it 🎉")
+
         await interaction.followup.send("CTF created in the discord server ✅", ephemeral=True)
 
     @app_commands.command(
@@ -235,7 +237,7 @@ class CTF(commands.Cog, name="ctftime"):
             await send_error(interaction, "guild")
             return
 
-        await check_permission(self,interaction)
+        await check_permission(self, interaction)
 
         ctf = await self.bot.database.get_ctfs_list(interaction.guild.id)
 
@@ -243,9 +245,7 @@ class CTF(commands.Cog, name="ctftime"):
             min_values=1,
             max_values=len(ctf),
             placeholder="Select the CTF to remove",
-            options=[
-                SelectOption(label=ctf_item.name, value=str(ctf_item.id)) for ctf_item in ctf
-            ],
+            options=[SelectOption(label=ctf_item.name, value=str(ctf_item.id)) for ctf_item in ctf],
         )
 
         async def remove(interaction):
@@ -265,7 +265,6 @@ class CTF(commands.Cog, name="ctftime"):
                         ephemeral=True,
                     )
                     return
-
 
                 channel = interaction.guild.get_channel(ctf_item.text_channel_id)
                 role = interaction.guild.get_role(ctf_item.role_id)
@@ -314,15 +313,11 @@ class CTF(commands.Cog, name="ctftime"):
         view.add_item(select)
         await interaction.followup.send("Select the CTF to remove", view=view, ephemeral=True)
 
-
     @app_commands.command(
         name="flag",
         description="Register a flag in the ctf.",
     )
-    @app_commands.describe(
-        flag="the flag",
-        challenge_name="the challenge name (optional)"
-    )
+    @app_commands.describe(flag="the flag", challenge_name="the challenge name (optional)")
     async def flag(self, interaction: Interaction, flag: str, challenge_name: str = "") -> None:
         await interaction.response.defer(ephemeral=True)
 
@@ -345,34 +340,27 @@ class CTF(commands.Cog, name="ctftime"):
         report = await self.bot.database.get_report(ctf.id)
 
         if report:
-            await self.bot.database.update_report(ctf.id,ReportModel(
-                ctf_id=ctf.id,
-                place=report.place,
-                score=report.score,
-                solves= report.solves + 1
-            ))
+            await self.bot.database.update_report(
+                ctf.id, ReportModel(ctf_id=ctf.id, place=report.place, score=report.score, solves=report.solves + 1)
+            )
         else:
-            await self.bot.database.add_report(ReportModel(
-                ctf_id=ctf.id,
-                place=-1,
-                score=-1,
-                solves=1
-            ))
+            await self.bot.database.add_report(ReportModel(ctf_id=ctf.id, place=-1, score=-1, solves=1))
 
         if isinstance(interaction.channel, TextChannel):
             if challenge_name:
-                msg = await interaction.channel.send(f"<@&{ctf.role_id}> NEW FLAG FOUND by {interaction.user.mention}! for `{challenge_name}` 🎉\n> `{flag}`")
+                msg = await interaction.channel.send(
+                    f"<@&{ctf.role_id}> NEW FLAG FOUND by {interaction.user.mention}! for `{challenge_name}` 🎉\n> `{flag}`"
+                )
             else:
                 msg = await interaction.channel.send(f"<@&{ctf.role_id}> NEW FLAG FOUND by {interaction.user.mention}! 🎉\n> `{flag}`")
             await msg.add_reaction("🔥")
         else:
             await interaction.followup.send(
                 "Unable to register the flag in this channel type. ❌",
-                        ephemeral=True,
+                ephemeral=True,
             )
 
         await interaction.followup.send("Flag registered successfully ✅", ephemeral=True)
-
 
     @app_commands.command(
         name="delete-flag",
@@ -397,18 +385,15 @@ class CTF(commands.Cog, name="ctftime"):
             )
             return
 
-        await check_permission(self,interaction)
+        await check_permission(self, interaction)
 
         if isinstance(interaction.channel, TextChannel):
             try:
                 report = await self.bot.database.get_report(ctf.id)
                 if report and report.solves > 0:
-                    await self.bot.database.update_report(ctf.id,ReportModel(
-                        ctf_id=ctf.id,
-                        place=report.place,
-                        score=report.score,
-                        solves= report.solves - 1
-                    ))
+                    await self.bot.database.update_report(
+                        ctf.id, ReportModel(ctf_id=ctf.id, place=report.place, score=report.score, solves=report.solves - 1)
+                    )
                 await interaction.followup.send("Flag deleted successfully ✅", ephemeral=True)
             except Exception as e:
                 logger.error(f"Failed to delete the message: {e}")
@@ -416,7 +401,7 @@ class CTF(commands.Cog, name="ctftime"):
         else:
             await interaction.followup.send(
                 "Unable to delete the flag in this channel type. ❌",
-                        ephemeral=True,
+                ephemeral=True,
             )
 
     @app_commands.command(
@@ -453,14 +438,9 @@ class CTF(commands.Cog, name="ctftime"):
             return
 
         if report.place == -1 or report.score == -1:
-            results = await get_results_info(ctf.ctftime_id,ctf.name.split("-")[-1].strip(), server.team_id)
+            results = await get_results_info(ctf.ctftime_id, ctf.name.split("-")[-1].strip(), server.team_id)
             if results:
-                report = ReportModel(
-                    ctf_id=ctf.id,
-                    place=results.get("place", -1),
-                    score=results.get("points", -1),
-                    solves=report.solves
-                )
+                report = ReportModel(ctf_id=ctf.id, place=results.get("place", -1), score=results.get("points", -1), solves=report.solves)
                 await self.bot.database.update_report(ctf.id, report)
 
         embed = Embed(
@@ -473,9 +453,6 @@ class CTF(commands.Cog, name="ctftime"):
         embed.add_field(name="Solves", value=report.solves, inline=False)
 
         await interaction.followup.send(embed=embed, ephemeral=True)
-
-
-
 
     @app_commands.command(
         name="creds",
@@ -504,7 +481,9 @@ class CTF(commands.Cog, name="ctftime"):
         else:
             description = ""
             for cred in creds:
-                description += f"**Username:** `{cred.username}`\n**Password:** `{cred.password}`\n**Need personal:** {'Yes' if cred.personal else '*No*'}\n\n"
+                description += (
+                    f"**Username:** `{cred.username}`\n**Password:** `{cred.password}`\n**Need personal:** {'Yes' if cred.personal else '*No*'}\n\n"
+                )
 
             embed = Embed(
                 title=f"Credentials for {ctf.name}",
@@ -536,7 +515,6 @@ class CTF(commands.Cog, name="ctftime"):
             )
             return
 
-
         creds = await self.bot.database.get_creds(ctf.id)
         if not creds:
             await interaction.response.send_message(
@@ -545,7 +523,7 @@ class CTF(commands.Cog, name="ctftime"):
             )
             return
 
-        if(await self.bot.database.delete_creds(ctf.id)):
+        if await self.bot.database.delete_creds(ctf.id):
             await interaction.response.send_message("Credential removed correctly ✅", ephemeral=True)
         else:
             await interaction.response.send_message("Failed to remove the credentials ❌", ephemeral=True)
@@ -558,7 +536,7 @@ class CTF(commands.Cog, name="ctftime"):
     )
     @app_commands.describe(
         ephemeral="Whether the response should be ephemeral or not (default: True)",
-        limit="The maximum number of CTFs to display (default: 100, max:100)"
+        limit="The maximum number of CTFs to display (default: 100, max:100)",
     )
     async def next_ctf(self, interaction: Interaction, ephemeral: bool = True, limit: int = 5) -> None:
         await interaction.response.defer(ephemeral=ephemeral)
@@ -599,11 +577,7 @@ class CTF(commands.Cog, name="ctftime"):
             format_type = ctf.get("format", "N/A")
 
             # Emoji per il formato
-            format_emoji = {
-                "Jeopardy": "🎯",
-                "Attack-Defense": "⚔️",
-                "Mixed": "🔀"
-            }.get(format_type, "📋")
+            format_emoji = {"Jeopardy": "🎯", "Attack-Defense": "⚔️", "Mixed": "🔀"}.get(format_type, "📋")
 
             # Link formattato
             link = f"[CTFtime]({ctftime_url})" if ctftime_url != "N/A" else "N/A"
@@ -624,6 +598,7 @@ class CTF(commands.Cog, name="ctftime"):
         embed.set_footer(text=f"Total: {len(data_list)} available CTFs")
 
         await interaction.followup.send(embed=embed, ephemeral=ephemeral)
+
 
 async def setup(bot) -> None:
     await bot.add_cog(CTF(bot))

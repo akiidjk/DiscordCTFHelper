@@ -4,7 +4,8 @@ CREATE TABLE IF NOT EXISTS server (
   archive_category_id INTEGER NOT NULL,
   role_manager_id INTEGER NOT NULL,
   feed_channel_id INTEGER NOT NULL,
-  team_id INTEGER NOT NULL
+  team_id INTEGER NOT NULL,
+  role_team_id INTEGER NOT NULL DEFAULT 0
 );
 
 CREATE TABLE IF NOT EXISTS ctf (

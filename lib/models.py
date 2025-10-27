@@ -27,6 +27,7 @@ class ServerModel:
     role_manager_id: int
     feed_channel_id: int
     team_id: int
+    role_team_id: int
 
 @dataclass(frozen=True)
 class ReportModel:

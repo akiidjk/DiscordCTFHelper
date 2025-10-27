@@ -383,14 +383,15 @@ class DatabaseManager:
         """
         try:
             await self.connection.execute(
-                "INSERT INTO server (id, active_category_id, archive_category_id, role_manager_id, feed_channel_id,team_id) VALUES (?,?,?,?,?,?)",
+                "INSERT INTO server (id, active_category_id, archive_category_id, role_manager_id, feed_channel_id,team_id , role_team_id) VALUES (?,?,?,?,?,?,?)",
                 (
                     server_model.id,
                     server_model.active_category_id,
                     server_model.archive_category_id,
                     server_model.role_manager_id,
                     server_model.feed_channel_id,
-                    server_model.team_id
+                    server_model.team_id,
+                    server_model.role_team_id
                 ),
             )
             await self.connection.commit()
@@ -422,6 +423,7 @@ class DatabaseManager:
                 role_manager_id=row[3],
                 feed_channel_id=row[4],
                 team_id=row[5],
+                role_team_id=row[6],
             )
 
     async def edit_category(self, server_model: ServerModel) -> bool:
