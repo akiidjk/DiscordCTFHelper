@@ -13,7 +13,7 @@ class FeedbackForm(discord.ui.Modal, title="Feeedback"):
         max_length=256,
     )
 
-    async def on_submit(self, interaction: discord.Interaction):
+    async def on_submit(self, interaction: discord.Interaction) -> None:
         self.interaction = interaction
         self.answer = str(self.feedback)
         self.stop()

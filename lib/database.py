@@ -1,8 +1,7 @@
-from lib.models import Creds
 import aiosqlite
 
 from lib.logger import logger
-from lib.models import CTFModel, ReportModel, ServerModel
+from lib.models import Creds, CTFModel, ReportModel, ServerModel
 
 
 class DatabaseManager:
@@ -52,8 +51,10 @@ class DatabaseManager:
 
         Args:
             ctf_id (int): The ID of the CTF.
+
         Returns:
             bool: True if the credentials were deleted, False otherwise.
+
         """
         try:
             await self.connection.execute(
@@ -73,8 +74,10 @@ class DatabaseManager:
 
         Args:
             ctf_id (int): The ID of the CTF.
+
         Returns:
             list[tuple[str, str]]: A list of tuples containing the username and password.
+
         """
         creds = []
         async with self.connection.execute(
@@ -83,14 +86,18 @@ class DatabaseManager:
             (ctf_id,),
         ) as cursor:
             rows = await cursor.fetchall()
-            for row in rows:
-                creds.append(Creds(
-                    id=0,
-                    ctf_id=ctf_id,
-                    username=row[0],
-                    password=row[1],
-                    personal=bool(row[2]),
-                ))
+            creds.extend(
+                [
+                    Creds(
+                        id=0,
+                        ctf_id=ctf_id,
+                        username=row[0],
+                        password=row[1],
+                        personal=bool(row[2]),
+                    )
+                    for row in rows
+                ]
+            )
         return creds
 
     async def add_report(self, report: ReportModel) -> None:
@@ -221,7 +228,7 @@ class DatabaseManager:
         Get a CTF from the database.
 
         Args:
-            id (int): The database id of the CTF.
+            ctf_id (int): The database id of the CTF.
 
         Returns:
             Optional[CTFModel]: The CTF or None if not found.
@@ -257,7 +264,7 @@ class DatabaseManager:
         Delete a CTF from the database.
 
         Args:
-            id (int): The database id of the CTF.
+            ctf_id (int): The database id of the CTF.
 
         Returns:
             bool: True if the CTF was deleted, False otherwise.
@@ -494,8 +501,8 @@ class DatabaseManager:
             (server_id,),
         ) as cursor:
             rows = await cursor.fetchall()
-            for row in rows:
-                ctfs.append(
+            ctfs.extend(
+                [
                     CTFModel(
                         id=row[0],
                         server_id=row[1],
@@ -507,5 +514,7 @@ class DatabaseManager:
                         msg_id=row[7],
                         ctftime_id=row[8],
                     )
-                )
+                    for row in rows
+                ]
+            )
         return ctfs

@@ -1,3 +1,4 @@
+from bot import DiscordBot
 from datetime import datetime
 
 from discord import (
@@ -28,8 +29,8 @@ MAX_DESC_LENGTH = 997
 class FormCreds(ui.Modal, title="Credentials Form"):
     def __init__(self, db: DatabaseManager, ctf_id: int):
         super().__init__()
-        self.db = db
-        self.ctf_id = ctf_id
+        self.db: DatabaseManager = db
+        self.ctf_id: int = ctf_id
 
         self.username = ui.TextInput(label="Username", placeholder="Enter the username", required=True, max_length=256)
         self.password = ui.TextInput(label="Password", placeholder="Enter the password", required=True)
@@ -39,11 +40,17 @@ class FormCreds(ui.Modal, title="Credentials Form"):
         self.add_item(self.password)
         self.add_item(self.personal)
 
-    async def on_submit(self, interaction: Interaction) -> None:
+    async def on_submit(self, interaction: Interaction, /) -> None:
         await self.db.add_creds(
-            ctf_id=self.ctf_id, username=self.username.value, password=self.password.value, personal=(self.personal.value == "yes")
+            ctf_id=self.ctf_id,
+            username=self.username.value,
+            password=self.password.value,
+            personal=(self.personal.value.strip().lower() == "yes")
         )
-        await interaction.response.send_message(f"Thank you for submitting the credentials, {interaction.user.name}!", ephemeral=True)
+        await interaction.response.send_message(
+            f"Thank you for submitting the credentials, {interaction.user.name}!",
+            ephemeral=True
+        )
 
 
 class CTF(commands.Cog, name="ctftime"):
@@ -221,7 +228,7 @@ class CTF(commands.Cog, name="ctftime"):
         await self.bot.database.add_ctf(ctf)
 
         team_role = interaction.guild.get_role(server.role_team_id)
-        if team_role:
+        if team_role and isinstance(interaction.channel, TextChannel):
             await interaction.channel.send(f"{team_role.mention} New CTF published in {feed_channel.mention} go to check it 🎉")
 
         await interaction.followup.send("CTF created in the discord server ✅", ephemeral=True)
@@ -269,11 +276,11 @@ class CTF(commands.Cog, name="ctftime"):
                 channel = interaction.guild.get_channel(ctf_item.text_channel_id)
                 role = interaction.guild.get_role(ctf_item.role_id)
                 event = interaction.guild.get_scheduled_event(ctf_item.event_id)
-                feedChannel = interaction.guild.get_channel(server.feed_channel_id)
+                feed_channel = interaction.guild.get_channel(server.feed_channel_id)
 
-                if feedChannel and isinstance(feedChannel, TextChannel):
+                if feed_channel and isinstance(feed_channel, TextChannel):
                     try:
-                        msg = await feedChannel.fetch_message(ctf_item.msg_id)
+                        msg = await feed_channel.fetch_message(ctf_item.msg_id)
                         if msg:
                             await msg.delete()
                     except Exception as e:
@@ -446,7 +453,7 @@ class CTF(commands.Cog, name="ctftime"):
         embed = Embed(
             title=f"Report for {ctf.name}",
             color=Color.blue(),
-            timestamp=datetime.now(),
+            timestamp=datetime.now().astimezone(),
         )
         embed.add_field(name="Place", value=report.place if report.place != -1 else "N/A", inline=False)
         embed.add_field(name="Score", value=report.score, inline=False)
@@ -489,7 +496,7 @@ class CTF(commands.Cog, name="ctftime"):
                 title=f"Credentials for {ctf.name}",
                 description=description,
                 color=Color.green(),
-                timestamp=datetime.now(),
+                timestamp=datetime.now().astimezone(),
             )
 
             await interaction.response.send_message(embed=embed, ephemeral=True)
@@ -536,7 +543,7 @@ class CTF(commands.Cog, name="ctftime"):
     )
     @app_commands.describe(
         ephemeral="Whether the response should be ephemeral or not (default: True)",
-        limit="The maximum number of CTFs to display (default: 100, max:100)",
+        limit="The maximum number of CTFs to display (default: 5, max:10)",
     )
     async def next_ctf(self, interaction: Interaction, ephemeral: bool = True, limit: int = 5) -> None:
         await interaction.response.defer(ephemeral=ephemeral)
@@ -554,18 +561,18 @@ class CTF(commands.Cog, name="ctftime"):
             limit = 5
 
         # Build a list of CTFs with required fields
-        lines = []
+        lines: list[str] = []
         logger.debug(f"Preparing to list up to {limit} CTFs")
         logger.debug(f"Data list length: {len(data_list)}")
         for idx, ctf in enumerate(data_list[:limit], 1):
             ctf_id = ctf.get("id", "N/A")
             title = ctf.get("title", "N/A")
             start_raw = ctf.get("start", None)
-            if start_raw:
+            if isinstance(start_raw, str) and start_raw:
                 try:
                     start_dt = datetime.fromisoformat(start_raw)
                     start = f"<t:{int(start_dt.timestamp())}:F> (<t:{int(start_dt.timestamp())}:R>)"
-                except Exception:
+                except ValueError:
                     start = str(start_raw)
             else:
                 start = "N/A"
@@ -582,18 +589,19 @@ class CTF(commands.Cog, name="ctftime"):
             # Link formattato
             link = f"[CTFtime]({ctftime_url})" if ctftime_url != "N/A" else "N/A"
 
-            lines.append(
+            line = (
                 f"### {idx} • {title}\n"
                 f"🆔 `{ctf_id}` • ⚖️ **Weight:** `{weight}` • 📍 **Location:** {onsite}\n"
                 f"📅 **Start:** {start} • ⏱️ **Duration:** `{duration_str}`\n"
                 f"{format_emoji} **Format:** {format_type} • 🔗 **Link:** {link}\n"
             )
+            lines.append(line)
 
         embed = Embed(
             title="📋 Next CTFs",
             description="\n".join(lines),
             color=Color.blue(),
-            timestamp=datetime.now(),
+            timestamp=datetime.now().astimezone(),
         )
         embed.set_footer(text=f"Total: {len(data_list)} available CTFs")
 

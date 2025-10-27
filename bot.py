@@ -16,7 +16,6 @@ from discord import (
 )
 from discord.ext import commands, tasks
 from discord.ext.commands import Context
-from discord.member import Member
 from discord.message import Message
 from dotenv import load_dotenv
 
@@ -204,11 +203,12 @@ class DiscordBot(commands.Bot):
         else:
             logger.info(f"Role not found for CTF {ctf.name}")
 
+NUMBER_ARGS = 2
 
 if __name__ == "__main__":
     load_dotenv()
 
-    if len(sys.argv) != 2 or sys.argv[1] not in levels:
+    if len(sys.argv) != NUMBER_ARGS or sys.argv[1] not in levels:
         message = "Please provide a valid logging level: DEBUG, INFO, WARNING, ERROR, CRITICAL (python3 bot.py <level>)"
         raise ValueError(message)
 

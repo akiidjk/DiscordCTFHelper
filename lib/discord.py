@@ -188,7 +188,19 @@ async def create_role(interaction: Interaction, name: str) -> Role | None:
 
 
 async def check_permission(self, interaction: Interaction[Client]) -> None:
+    if interaction.guild is None:
+        await interaction.followup.send(
+            "Guild not found. ❌",
+            ephemeral=True,
+        )
+        return
     server = await self.bot.database.get_server_by_id(interaction.guild.id)
+    if server is None:
+        await interaction.followup.send(
+            "Server configuration not found. ❌",
+            ephemeral=True,
+        )
+        return
     role_manager = interaction.guild.get_role(server.role_manager_id)
     if not isinstance(interaction.user, Member) or not role_manager or role_manager not in interaction.user.roles:
         await interaction.followup.send(
