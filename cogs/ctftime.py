@@ -229,7 +229,7 @@ class CTF(commands.Cog, name="ctftime"):
 
         team_role = interaction.guild.get_role(server.role_team_id)
         if team_role and isinstance(interaction.channel, TextChannel):
-            await interaction.channel.send(f"{team_role.mention} New CTF published in {feed_channel.mention} go to check it 🎉")
+            await interaction.channel.send(f"{team_role.mention} New CTF published in {feed_channel.mention}, go check it 🎉")
 
         await interaction.followup.send("CTF created in the discord server ✅", ephemeral=True)
 
