@@ -1,4 +1,3 @@
-from bot import DiscordBot
 from datetime import datetime
 
 from discord import (
@@ -324,8 +323,12 @@ class CTF(commands.Cog, name="ctftime"):
         name="flag",
         description="Register a flag in the ctf.",
     )
-    @app_commands.describe(flag="the flag", challenge_name="the challenge name (optional)")
-    async def flag(self, interaction: Interaction, flag: str, challenge_name: str = "") -> None:
+    @app_commands.describe(
+        flag="the flag",
+        solver_mate="If you solved the challenge together with someone, specify their tag",
+        challenge_name="the challenge name (optional)"
+    )
+    async def flag(self, interaction: Interaction, flag: str, solver_mate: Member,challenge_name: str = "") -> None:
         await interaction.response.defer(ephemeral=True)
 
         if not interaction.guild:
@@ -354,12 +357,11 @@ class CTF(commands.Cog, name="ctftime"):
             await self.bot.database.add_report(ReportModel(ctf_id=ctf.id, place=-1, score=-1, solves=1))
 
         if isinstance(interaction.channel, TextChannel):
-            if challenge_name:
-                msg = await interaction.channel.send(
-                    f"<@&{ctf.role_id}> NEW FLAG FOUND by {interaction.user.mention}! for `{challenge_name}` 🎉\n> `{flag}`"
-                )
-            else:
-                msg = await interaction.channel.send(f"<@&{ctf.role_id}> NEW FLAG FOUND by {interaction.user.mention}! 🎉\n> `{flag}`")
+            msg = await interaction.channel.send(
+                f"<@&{ctf.role_id}> NEW FLAG FOUND by {interaction.user.mention}! "
+                f"and {solver_mate.mention if solver_mate else ''}"
+                f"{f'for `{challenge_name}`' if challenge_name else ''} 🎉\n> `{flag}`"
+            )
             await msg.add_reaction("🔥")
         else:
             await interaction.followup.send(
