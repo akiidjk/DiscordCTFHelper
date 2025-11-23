@@ -325,10 +325,10 @@ class CTF(commands.Cog, name="ctftime"):
     )
     @app_commands.describe(
         flag="the flag",
-        solver_mate="If you solved the challenge together with someone, specify their tag",
+        mate="If you solved the challenge together with someone, specify their tag",
         challenge_name="the challenge name (optional)"
     )
-    async def flag(self, interaction: Interaction, flag: str, solver_mate: Member,challenge_name: str = "") -> None:
+    async def flag(self, interaction: Interaction, flag: str, mate: Member | None = None, challenge_name: str = "") -> None:
         await interaction.response.defer(ephemeral=True)
 
         if not interaction.guild:
@@ -359,7 +359,7 @@ class CTF(commands.Cog, name="ctftime"):
         if isinstance(interaction.channel, TextChannel):
             msg = await interaction.channel.send(
                 f"<@&{ctf.role_id}> NEW FLAG FOUND by {interaction.user.mention}! "
-                f"and {solver_mate.mention if solver_mate else ''}"
+                f"and {mate.mention if mate else ''}"
                 f"{f'for `{challenge_name}`' if challenge_name else ''} 🎉\n> `{flag}`"
             )
             await msg.add_reaction("🔥")
