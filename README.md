@@ -78,7 +78,7 @@
 - A user with admin role can run the command /init for the bot setup
 - Create a ctf with /create_ctf
 
-## RAD
+## RAD (outdated)
 
 - [Rad EN](/docs/RAD_en.pdf)
 - [Rad IT](/docs/RAD_it.pdf)
@@ -95,7 +95,7 @@ This project is licensed under the Apache License. See the [LICENSE](LICENSE.md)
 - [x] Flag command
 - [x] Reaction cookie and fire too each flag
 - [x] Remove command
-- [ ] Creds command (command for store and show the creds of a ctf)
+- [x] Creds command (command for store and show the creds of a ctf)
 
 ## Contact
 
