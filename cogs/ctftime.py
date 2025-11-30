@@ -359,7 +359,7 @@ class CTF(commands.Cog, name="ctftime"):
         if isinstance(interaction.channel, TextChannel):
             msg = await interaction.channel.send(
                 f"<@&{ctf.role_id}> NEW FLAG FOUND by {interaction.user.mention}! "
-                f"and {mate.mention if mate else ''}"
+                f"{f"and {mate.mention}" if mate else ''}"
                 f"{f'for `{challenge_name}`' if challenge_name else ''} 🎉\n> `{flag}`"
             )
             await msg.add_reaction("🔥")
