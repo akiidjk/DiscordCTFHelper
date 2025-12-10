@@ -182,6 +182,11 @@ class CTF(commands.Cog, name="ctftime"):
         if not channel:
             return
 
+
+        await channel.send(f"{role.mention} Welcome to the CTF **{data['title']}**! 🎉")
+        msg = await channel.send("Link to ctf: " + data["url"])
+        await msg.pin()
+
         feed_channel = interaction.guild.get_channel(server.feed_channel_id)
 
         if not isinstance(feed_channel, TextChannel):
