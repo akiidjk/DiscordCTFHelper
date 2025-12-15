@@ -17,7 +17,7 @@ func LoadConfig() (*Config, error) {
 
 	cfg := Config{
 		Bot: BotConfig{
-			DevGuilds: []snowflake.ID{1345702395178651698},
+			DevGuilds: []snowflake.ID{},
 			Token:     os.Getenv("TOKEN"),
 		},
 		Log: LogConfig{

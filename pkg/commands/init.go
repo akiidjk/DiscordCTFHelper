@@ -1,10 +1,10 @@
 package commands
 
 import (
-	"fmt"
-
 	ctfbot "ctfhelper/pkg/bot"
+	"ctfhelper/pkg/database"
 
+	"github.com/charmbracelet/log"
 	"github.com/disgoorg/disgo/discord"
 	"github.com/disgoorg/disgo/handler"
 )
@@ -56,9 +56,84 @@ var cinit = discord.SlashCommandCreate{
 }
 
 func InitHandler(b *ctfbot.Bot) handler.CommandHandler {
+	log.Info("Setting up InitHandler")
 	return func(e *handler.CommandEvent) error {
-		return e.CreateMessage(discord.MessageCreate{
-			Content: fmt.Sprintf("Version: %s\nCommit: %s", b.Version, b.Commit),
+		log.Debug("InitHandler called", "guild_id", e.GuildID())
+
+		if err := e.DeferCreateMessage(true); err != nil {
+			log.Error("Failed to defer create message", "error", err)
+			return err
+		}
+
+		if e.Member == nil || !e.Member().Permissions.Has(discord.PermissionAdministrator) {
+			log.Warn("User tried to run /init without admin permissions", "user_id", e.User().ID, "guild_id", e.GuildID())
+			_, err := e.CreateFollowupMessage(discord.MessageCreate{
+				Content: "You need to be the admin of the server to run this command. ❌",
+				Flags:   discord.MessageFlagEphemeral,
+			})
+			return err
+		}
+
+		if e.Guild == nil {
+			log.Warn("Init command used outside of a guild", "user_id", e.User().ID)
+			_, err := e.CreateFollowupMessage(discord.MessageCreate{
+				Content: "This command can only be used inside a guild. ❌",
+				Flags:   discord.MessageFlagEphemeral,
+			})
+			return err
+		}
+
+		options := e.SlashCommandInteractionData()
+
+		categoryActive := options.Channel("category_active")
+		archiveCategory := options.Channel("category_archived")
+		roleManager := options.Role("role_manager")
+		feedChannel := options.Channel("feed_channel")
+		teamID := options.Int("team_id")
+		roleTeam := options.Role("role_team_id")
+
+		log.Debug("Parsed options",
+			"category_active", categoryActive.ID,
+			"category_archived", archiveCategory.ID,
+			"role_manager", roleManager.ID,
+			"feed_channel", feedChannel.ID,
+			"team_id", teamID,
+			"role_team_id", roleTeam,
+			"guild_id", e.GuildID(),
+		)
+
+		server, err := b.Database.GetServerByID(*e.GuildID())
+		if err != nil {
+			log.Error("Failed to get server by ID", "guild_id", e.GuildID(), "error", err)
+			return err
+		}
+		if server != nil {
+			log.Info("Server already exists, deleting old config", "guild_id", e.GuildID())
+			if err := b.Database.DeleteServer(*e.GuildID()); err != nil {
+				log.Error("Failed to delete existing server config", "guild_id", e.GuildID(), "error", err)
+				return err
+			}
+		}
+
+		log.Info("Adding new server config", "guild_id", e.GuildID())
+		if err := b.Database.AddServer(database.ServerModel{
+			ID:                *e.GuildID(),
+			ActiveCategoryID:  categoryActive.ID,
+			ArchiveCategoryID: archiveCategory.ID,
+			RoleManagerID:     roleManager.ID,
+			FeedChannelID:     feedChannel.ID,
+			TeamID:            int64(teamID),
+			RoleTeamID:        roleTeam.ID,
+		}); err != nil {
+			log.Error("Failed to add server config", "guild_id", e.GuildID(), "error", err)
+			return err
+		}
+
+		log.Info("Successfully configured the bot", "guild_id", e.GuildID())
+		_, err = e.CreateFollowupMessage(discord.MessageCreate{
+			Content: "Successfully configured the bot! ✅",
+			Flags:   discord.MessageFlagEphemeral,
 		})
+		return err
 	}
 }

@@ -1,11 +1,18 @@
 package ctftime
 
 import (
+	"bytes"
 	"encoding/json"
-	"image/png"
+	"fmt"
+	"image"
+	"io"
 	"math/rand"
 	"net/http"
 	"strconv"
+
+	_ "image/gif"
+	_ "image/jpeg"
+	_ "image/png"
 
 	"github.com/charmbracelet/log"
 )
@@ -42,33 +49,46 @@ func createRequest(url string) (*http.Request, error) {
 	return req, nil
 }
 
-func GetLogo(url string) ([]byte, error) {
+func GetLogo(url string) ([]byte, string, error) {
+	log.Debug("Fetching logo from URL:", "url", url)
 	client := &http.Client{}
 	req, err := createRequest(url)
+	if err != nil {
+		log.Error("Error creating request for logo:", "err", err)
+		return nil, "", err
+	}
 
 	resp, err := client.Do(req)
 	if err != nil {
-		log.Error("Error sending request:", "err", err)
-		return nil, err
+		log.Error("Error sending request for logo:", "err", err)
+		return nil, "", err
 	}
 	defer resp.Body.Close()
 
-	_, err = png.Decode(resp.Body)
+	const maxSize = 5 << 20 // 5 MB
+	data, err := io.ReadAll(io.LimitReader(resp.Body, maxSize))
 	if err != nil {
-		log.Error("Error decoding image:", "err", err)
-		return nil, err
+		log.Error("Error reading logo response body:", "err", err)
+		return nil, "", err
 	}
 
-	var image []byte
-	resp.Body.Read(image)
+	log.Debug("Logo data fetched, size:", "size", len(data))
+	log.Debug("First bytes" + fmt.Sprintf("% x", data[:10]))
 
-	// Return the image bytes
-	return image, nil
+	_, format, err := image.Decode(bytes.NewReader(data))
+	if err != nil {
+		log.Error("Error decoding image data:", "err", err)
+		return nil, "", err
+	}
+
+	log.Debug("Successfully fetched and decoded logo", "format", format)
+	return data, format, nil
 }
 
 func GetCTFInfo(ctftime_id int) (Event, error) {
 	idParsed := strconv.Itoa(ctftime_id)
 	url := BASE_URL + "/events/" + idParsed + "/"
+	log.Debug("Fetching CTF info from URL:", "url", url)
 	client := &http.Client{}
 	req, err := createRequest(url)
 
@@ -80,14 +100,12 @@ func GetCTFInfo(ctftime_id int) (Event, error) {
 	defer resp.Body.Close()
 
 	var parsedJson Event
-	var jsonResponse []byte
-	_, err = resp.Body.Read(jsonResponse)
+	if resp.StatusCode != http.StatusOK {
+		return Event{}, fmt.Errorf("status %d", resp.StatusCode)
+	}
+	err = json.NewDecoder(resp.Body).Decode(&parsedJson)
 	if err != nil {
 		return Event{}, err
-	}
-
-	if resp.StatusCode == 200 {
-		json.Unmarshal(jsonResponse, &parsedJson)
 	}
 
 	return parsedJson, nil

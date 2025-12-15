@@ -13,4 +13,6 @@ var Commands = []discord.ApplicationCommandCreate{
 	delete_creds,
 	next_ctfs,
 	cinit,
+	chall,
+	vote,
 }

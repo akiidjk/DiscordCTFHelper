@@ -13,7 +13,6 @@ import (
 	"ctfhelper/pkg"
 	ctfbot "ctfhelper/pkg/bot"
 	"ctfhelper/pkg/commands"
-	"ctfhelper/pkg/components"
 	"ctfhelper/pkg/database"
 	"ctfhelper/pkg/handlers"
 
@@ -48,16 +47,25 @@ func main() {
 	log.Info("Starting bot-template...", "version", Version, "commit", Commit)
 	log.Info("Syncing commands", "sync", *shouldSyncCommands)
 
-	db := database.Setup()
-	defer db.Close()
-
 	b := ctfbot.New(*cfg, Version, Commit)
+	b.Database = database.Setup()
+	defer b.Database.Close()
 
 	h := handler.New()
-	h.Command("/test", commands.TestHandler)
-	h.Autocomplete("/test", commands.TestAutocompleteHandler)
+
+	// Command registrations
 	h.Command("/version", commands.VersionHandler(b))
-	h.Component("/test-button", components.TestComponent)
+	h.Command("/create", commands.CreateHandler(b))
+	h.Command("/remove", commands.RemoveHandler(b))
+	h.Command("/flag", commands.FlagHandler(b))
+	h.Command("/delete-flag", commands.DeleteFlagHandler(b))
+	h.Command("/report", commands.ReportHandler(b))
+	h.Command("/creds", commands.CredsHandler(b))
+	h.Command("/delete-creds", commands.DeleteCredsHandler(b))
+	h.Command("/next-ctfs", commands.NextCTFsHandler(b))
+	h.Command("/init", commands.InitHandler(b))
+	h.Command("/chall", commands.ChallHandler(b))
+	h.Command("/vote", commands.VoteHandler(b))
 
 	if err = b.SetupBot(h, bot.NewListenerFunc(b.OnReady), handlers.MessageHandler(b)); err != nil {
 		log.Error("Failed to setup bot", "err", err)
@@ -70,12 +78,12 @@ func main() {
 		b.Client.Close(ctx)
 	}()
 
-	if *shouldSyncCommands {
-		log.Info("Syncing commands", "guild_ids", cfg.Bot.DevGuilds)
-		if err = handler.SyncCommands(b.Client, commands.Commands, cfg.Bot.DevGuilds); err != nil {
-			log.Error("Failed to sync commands", "err", err)
-		}
-	}
+	// if *shouldSyncCommands {
+	// 	log.Info("Syncing commands", "guild_ids", cfg.Bot.DevGuilds)
+	// 	if err = handler.SyncCommands(b.Client, commands.Commands, cfg.Bot.DevGuilds); err != nil {
+	// 		log.Error("Failed to sync commands", "err", err)
+	// 	}
+	// }
 
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
