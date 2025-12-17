@@ -2,6 +2,7 @@ package ctftime
 
 import (
 	"bytes"
+	"database"
 	"encoding/json"
 	"fmt"
 	"image"
@@ -10,8 +11,6 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
-
-	"ctfhelper/pkg/database"
 
 	_ "image/gif"
 	_ "image/jpeg"

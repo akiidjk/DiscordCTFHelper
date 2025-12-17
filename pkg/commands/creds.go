@@ -1,13 +1,14 @@
 package commands
 
 import (
+	"ctfhelper/pkg/database"
+	utils "ctfhelper/pkg/discord"
+	"discordutils"
 	"fmt"
 	"log/slog"
 	"time"
 
 	ctfbot "ctfhelper/pkg/bot"
-	"ctfhelper/pkg/database"
-	utils "ctfhelper/pkg/discord"
 
 	"github.com/charmbracelet/log"
 	"github.com/disgoorg/disgo/discord"
@@ -21,7 +22,7 @@ var creds = discord.SlashCommandCreate{
 
 func CredsHandler(b *ctfbot.Bot) handler.CommandHandler {
 	return func(e *handler.CommandEvent) error {
-		if e.Guild == nil {
+		if e.GuildID() == nil {
 			log.Warn("Report command used outside of a guild", "user_id", e.User().ID)
 			_, err := e.CreateFollowupMessage(discord.MessageCreate{
 				Content: "This command can only be used inside a guild. ❌",
@@ -44,7 +45,7 @@ func CredsHandler(b *ctfbot.Bot) handler.CommandHandler {
 			return err
 		}
 
-		if err := utils.CheckPermission(b, e); err != nil {
+		if err := discordutils.CheckPermission(b, e); err != nil {
 			return err
 		}
 
@@ -120,7 +121,7 @@ func CredsHandler(b *ctfbot.Bot) handler.CommandHandler {
 			embed := discord.Embed{
 				Title:       "Credentials for " + ctf.Name,
 				Description: description,
-				Color:       utils.ColorGreen,
+				Color:       discordutils.ColorGreen,
 				Timestamp:   &now,
 			}
 

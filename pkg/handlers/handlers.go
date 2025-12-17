@@ -1,7 +1,7 @@
 package handlers
 
 import (
-	ctfbot "ctfhelper/pkg/bot"
+	"ctfbot"
 
 	"github.com/disgoorg/disgo/bot"
 	"github.com/disgoorg/disgo/events"

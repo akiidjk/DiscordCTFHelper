@@ -42,7 +42,7 @@ func FlagHandler(b *ctfbot.Bot) handler.CommandHandler {
 			return err
 		}
 
-		if e.Guild == nil {
+		if e.GuildID() == nil {
 			log.Warn("Create command used outside of a guild", "user_id", e.User().ID)
 			_, err := e.CreateFollowupMessage(discord.MessageCreate{
 				Content: "This command can only be used inside a guild. ❌",

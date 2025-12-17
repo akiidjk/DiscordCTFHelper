@@ -1,14 +1,13 @@
 package ctfbot
 
 import (
+	"config"
 	"context"
+	"database"
 	"fmt"
 	"strconv"
 	"strings"
 	"time"
-
-	"ctfhelper/pkg"
-	"ctfhelper/pkg/database"
 
 	"github.com/charmbracelet/log"
 
@@ -28,7 +27,7 @@ var STATUSES = []string{
 	"Preparing for your next CTF event...",
 }
 
-func New(cfg pkg.Config, version string, commit string) *Bot {
+func New(cfg config.Config, version string, commit string) *Bot {
 	return &Bot{
 		Cfg: cfg,
 		// Paginator: paginator.New(),
@@ -38,7 +37,7 @@ func New(cfg pkg.Config, version string, commit string) *Bot {
 }
 
 type Bot struct {
-	Cfg    pkg.Config
+	Cfg    config.Config
 	Client bot.Client
 	// Paginator *paginator.Manager
 	Version  string
@@ -78,19 +77,21 @@ func (b *Bot) SetupBot(shouldCleanCommands *bool, listeners ...bot.EventListener
 func changePresenceStatus(ctx context.Context, client bot.Client) error {
 	ticker := time.NewTicker(10 * time.Minute)
 	defer ticker.Stop()
-	for {
-		select {
-		case <-ticker.C:
-			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-			status := STATUSES[time.Now().UnixNano()%int64(len(STATUSES))]
-			client.SetPresence(
-				ctx,
-				gateway.WithOnlineStatus(discord.OnlineStatusOnline),
-				gateway.WithListeningActivity(status),
-			)
-			cancel()
+	for range ticker.C {
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		status := STATUSES[time.Now().UnixNano()%int64(len(STATUSES))]
+		err := client.SetPresence(
+			ctx,
+			gateway.WithOnlineStatus(discord.OnlineStatusOnline),
+			gateway.WithListeningActivity(status),
+		)
+		if err != nil {
+			log.Error("Failed to change presence status", "err", err)
 		}
+		cancel()
 	}
+
+	return nil
 }
 
 // Delete all commands from Discord
@@ -180,12 +181,17 @@ func (b *Bot) modalListener(e *events.ModalSubmitInteractionCreate) {
 		}
 
 		// Add credentials to the database
-		b.Database.AddCreds(
+		err = b.Database.AddCreds(
 			username,
 			password,
 			personal,
 			int64(ctfID),
 		)
+		if err != nil {
+			log.Error("Error adding credentials to database", "err", err, "ctf_id", ctfID)
+			content = "Error saving credentials."
+			break
+		}
 		content += "Credentials submitted ✅."
 	default:
 		content = "Unknown modal submitted."

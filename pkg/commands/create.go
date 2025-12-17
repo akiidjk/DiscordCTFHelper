@@ -1,21 +1,19 @@
 package commands
 
 import (
+	ctfbot "ctfhelper/pkg/bot"
+	"ctfhelper/pkg/database"
+	"ctftime"
+	"discordutils"
 	"errors"
 	"fmt"
 	"time"
-
-	ctfbot "ctfhelper/pkg/bot"
-	"ctfhelper/pkg/ctftime"
-	"ctfhelper/pkg/database"
 
 	"github.com/charmbracelet/log"
 	"github.com/disgoorg/disgo/bot"
 	"github.com/disgoorg/disgo/discord"
 	"github.com/disgoorg/disgo/handler"
 	"github.com/disgoorg/snowflake/v2"
-
-	utils "ctfhelper/pkg/discord"
 )
 
 const MAX_DESC_LENGTH = 4096
@@ -74,7 +72,7 @@ func CreateCTF(guildId *snowflake.ID, client *bot.Client, channel discord.Messag
 	}
 
 	log.Info("Creating role and channel for CTF", "title", title)
-	role, err := utils.CreateRole(
+	role, err := discordutils.CreateRole(
 		b,
 		guildId,
 		title,
@@ -89,7 +87,7 @@ func CreateCTF(guildId *snowflake.ID, client *bot.Client, channel discord.Messag
 
 	log.Debug("Created role for CTF", "role_id", role.ID)
 	log.Debug("Creating channel for CTF", "title", title)
-	channelCTF, err := utils.CreateChannel(
+	channelCTF, err := discordutils.CreateChannel(
 		b,
 		guildId,
 		title,
@@ -138,7 +136,7 @@ func CreateCTF(guildId *snowflake.ID, client *bot.Client, channel discord.Messag
 	log.Debug("Fetched feed channel", "channel_id", feedChannel.ID())
 
 	log.Debug("Creating embed message for CTF", "title", title)
-	embedMsg, err := utils.CreateEmbed(
+	embedMsg, err := discordutils.CreateEmbed(
 		b,
 		data,
 		startTime,
@@ -159,7 +157,7 @@ func CreateCTF(guildId *snowflake.ID, client *bot.Client, channel discord.Messag
 	}
 
 	log.Info("Creating scheduled event for CTF", "title", title)
-	events, err := utils.CreateEvents(
+	events, err := discordutils.CreateEvents(
 		b,
 		guildId,
 		data,
@@ -202,7 +200,7 @@ func CreateHandler(b *ctfbot.Bot) handler.CommandHandler {
 			return err
 		}
 
-		if e.Guild == nil {
+		if e.GuildID() == nil {
 			log.Warn("Create command used outside of a guild", "user_id", e.User().ID)
 			_, err := e.CreateFollowupMessage(discord.MessageCreate{
 				Content: "This command can only be used inside a guild. ❌",
@@ -240,7 +238,7 @@ func CreateHandler(b *ctfbot.Bot) handler.CommandHandler {
 			return err
 		}
 
-		if err := utils.CheckPermission(b, e); err != nil {
+		if err := discordutils.CheckPermission(b, e); err != nil {
 			_, _ = e.CreateFollowupMessage(discord.MessageCreate{
 				Content: "You do not have permission to use this command. ❌",
 				Flags:   discord.MessageFlagEphemeral,

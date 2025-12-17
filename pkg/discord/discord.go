@@ -1,12 +1,11 @@
-package discord
+package discordutils
 
 import (
+	"ctfbot"
+	"ctftime"
 	"errors"
 	"fmt"
 	"time"
-
-	ctfbot "ctfhelper/pkg/bot"
-	"ctfhelper/pkg/ctftime"
 
 	"github.com/charmbracelet/log"
 	"github.com/disgoorg/disgo/discord"

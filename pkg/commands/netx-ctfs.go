@@ -6,7 +6,6 @@ import (
 	"time"
 
 	ctfbot "ctfhelper/pkg/bot"
-	"ctfhelper/pkg/ctftime"
 
 	"github.com/disgoorg/disgo/discord"
 	"github.com/disgoorg/disgo/handler"

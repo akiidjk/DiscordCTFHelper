@@ -65,7 +65,7 @@ func InitHandler(b *ctfbot.Bot) handler.CommandHandler {
 			return err
 		}
 
-		if e.Member == nil || !e.Member().Permissions.Has(discord.PermissionAdministrator) {
+		if e.Member() == nil || !e.Member().Permissions.Has(discord.PermissionAdministrator) {
 			log.Warn("User tried to run /init without admin permissions", "user_id", e.User().ID, "guild_id", e.GuildID())
 			_, err := e.CreateFollowupMessage(discord.MessageCreate{
 				Content: "You need to be the admin of the server to run this command. ❌",
@@ -74,7 +74,7 @@ func InitHandler(b *ctfbot.Bot) handler.CommandHandler {
 			return err
 		}
 
-		if e.Guild == nil {
+		if e.GuildID() == nil {
 			log.Warn("Init command used outside of a guild", "user_id", e.User().ID)
 			_, err := e.CreateFollowupMessage(discord.MessageCreate{
 				Content: "This command can only be used inside a guild. ❌",

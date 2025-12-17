@@ -21,7 +21,7 @@ func DeleteFlagHandler(b *ctfbot.Bot) handler.CommandHandler {
 			return err
 		}
 
-		if e.Guild == nil {
+		if e.GuildID() == nil {
 			log.Warn("Delete-flag command used outside of a guild", "user_id", e.User().ID)
 			_, err := e.CreateFollowupMessage(discord.MessageCreate{
 				Content: "This command can only be used inside a guild. ❌",
@@ -31,7 +31,7 @@ func DeleteFlagHandler(b *ctfbot.Bot) handler.CommandHandler {
 		}
 
 		// Check if user is a guild member
-		if e.Member == nil {
+		if e.Member() == nil {
 			log.Warn("Delete-flag command used by non-member", "user_id", e.User().ID)
 			_, err := e.CreateFollowupMessage(discord.MessageCreate{
 				Content: "This command can only be used by a guild member. ❌",
