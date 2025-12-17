@@ -8,7 +8,7 @@ build-prod:
 	@env CGO_ENABLED=1 GOOS=linux GOARCH=amd64 go build -tags "libsqlite3 linux" -trimpath -ldflags="-s -w" -o bin/ctfhelper cmd/ctfhelper/main.go
 
 run: build
-	@./bin/ctfhelper --sync-commands
+	@./bin/ctfhelper $(ARGS)
 
 lint:
 	@if ! golangci-lint run; then exit 1; fi
