@@ -1,7 +1,6 @@
 package commands
 
 import (
-	"ctfbot"
 	"database"
 	"discordutils"
 
@@ -10,15 +9,16 @@ import (
 	"github.com/disgoorg/disgo/handler"
 )
 
-var delete_creds = discord.SlashCommandCreate{
+var deleteCreds = discord.SlashCommandCreate{
 	Name:        "delete-creds",
 	Description: "Delete the creds for the ctf.",
 }
 
-func DeleteCredsHandler(b *ctfbot.Bot) handler.CommandHandler {
+func DeleteCredsHandler() handler.CommandHandler {
 	return func(e *handler.CommandEvent) error {
+		db := database.GetInstance()
 		if err := e.DeferCreateMessage(true); err != nil {
-			log.Error("Failed to defer create message", "error", err)
+			log.Error("failed to defer create message", "error", err)
 			return err
 		}
 
@@ -31,20 +31,20 @@ func DeleteCredsHandler(b *ctfbot.Bot) handler.CommandHandler {
 			return err
 		}
 
-		if err := discordutils.CheckPermission(b, e); err != nil {
+		if err := discordutils.CheckPermission(e); err != nil {
 			return err
 		}
 
 		// Find the CTF associated with the current channel
-		ctf, err := b.Database.GetCTFByChannelID(e.Channel().ID(), *e.GuildID())
+		ctf, err := db.GetCTFByChannelID(e.Channel().ID(), *e.GuildID())
 		if err != nil {
-			log.Error("Failed to fetch CTF for channel", "error", err)
+			log.Error("failed to fetch CTF for channel", "error", err)
 			_, sendErr := e.CreateFollowupMessage(discord.MessageCreate{
-				Content: "Failed to find the CTF for this channel. ❌",
+				Content: "failed to find the CTF for this channel. ❌",
 				Flags:   discord.MessageFlagEphemeral,
 			})
 			if sendErr != nil {
-				log.Error("Failed to send followup", "error", sendErr)
+				log.Error("failed to send followup", "error", sendErr)
 				return sendErr
 			}
 			return nil
@@ -57,15 +57,15 @@ func DeleteCredsHandler(b *ctfbot.Bot) handler.CommandHandler {
 			return err
 		}
 
-		creds, err := b.Database.GetCreds(ctf.ID)
+		creds, err := db.GetCreds(ctf.ID)
 		if err != nil {
-			log.Error("Failed to fetch creds for CTF", "error", err)
+			log.Error("failed to fetch creds for CTF", "error", err)
 			_, sendErr := e.CreateFollowupMessage(discord.MessageCreate{
-				Content: "Failed to retrieve credentials for this CTF. ❌",
+				Content: "failed to retrieve credentials for this CTF. ❌",
 				Flags:   discord.MessageFlagEphemeral,
 			})
 			if sendErr != nil {
-				log.Error("Failed to send followup", "error", sendErr)
+				log.Error("failed to send followup", "error", sendErr)
 				return sendErr
 			}
 			return nil
@@ -79,7 +79,7 @@ func DeleteCredsHandler(b *ctfbot.Bot) handler.CommandHandler {
 			return err
 		}
 
-		ok := b.Database.DeleteCreds(ctf.ID)
+		ok := db.DeleteCreds(ctf.ID)
 		if ok {
 			_, err := e.CreateFollowupMessage(discord.MessageCreate{
 				Content: "Credential removed correctly ✅",
@@ -88,7 +88,7 @@ func DeleteCredsHandler(b *ctfbot.Bot) handler.CommandHandler {
 			return err
 		} else {
 			_, err := e.CreateFollowupMessage(discord.MessageCreate{
-				Content: "Failed to remove the credentials ❌",
+				Content: "failed to remove the credentials ❌",
 				Flags:   discord.MessageFlagEphemeral,
 			})
 			return err

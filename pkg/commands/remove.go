@@ -1,7 +1,6 @@
 package commands
 
 import (
-	"ctfbot"
 	"database"
 	"strconv"
 
@@ -27,10 +26,11 @@ func ParseCtfsOptions(ctfs []database.CTFModel) []discord.StringSelectMenuOption
 	return options
 }
 
-func RemoveHandler(b *ctfbot.Bot) handler.CommandHandler {
+func RemoveHandler() handler.CommandHandler {
 	return func(e *handler.CommandEvent) error {
+		db := database.GetInstance()
 		if err := e.DeferCreateMessage(true); err != nil {
-			log.Error("Failed to defer create message", "error", err)
+			log.Error("failed to defer create message", "error", err)
 			return err
 		}
 
@@ -43,8 +43,11 @@ func RemoveHandler(b *ctfbot.Bot) handler.CommandHandler {
 			return err
 		}
 
-		ctfs, err := b.Database.GetCTFsList(*e.GuildID())
-
+		ctfs, err := db.GetCTFsList(*e.GuildID())
+		if err != nil {
+			log.Error("failed to fetch ctfs list", "error", err)
+			return err
+		}
 		msg := discord.MessageCreate{
 			Content: "Seleziona un CTF:",
 			Components: []discord.LayoutComponent{

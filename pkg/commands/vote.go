@@ -1,7 +1,6 @@
 package commands
 
 import (
-	"ctfbot"
 	"ctftime"
 	"fmt"
 	"time"
@@ -16,7 +15,7 @@ var vote = discord.SlashCommandCreate{
 	Description: "Vote the next ctf to participate in",
 }
 
-func VoteHandler(b *ctfbot.Bot) handler.CommandHandler {
+func VoteHandler() handler.CommandHandler {
 	return func(e *handler.CommandEvent) error {
 		if e.GuildID() == nil {
 			log.Warn("Create command used outside of a guild", "user_id", e.User().ID)
@@ -29,7 +28,7 @@ func VoteHandler(b *ctfbot.Bot) handler.CommandHandler {
 
 		ctfs, err := ctftime.GetCTFs()
 		if err != nil {
-			log.Error("Failed to get CTFs", "error", err)
+			log.Error("failed to get CTFs", "error", err)
 			return err
 		}
 

@@ -1,7 +1,7 @@
 package commands
 
 import (
-	"ctfbot"
+	"database"
 	"discordutils"
 
 	"github.com/charmbracelet/log"
@@ -9,15 +9,16 @@ import (
 	"github.com/disgoorg/disgo/handler"
 )
 
-var delete_flag = discord.SlashCommandCreate{
+var deleteFlag = discord.SlashCommandCreate{
 	Name:        "delete-flag",
 	Description: "Delete a flag in the ctf.",
 }
 
-func DeleteFlagHandler(b *ctfbot.Bot) handler.CommandHandler {
+func DeleteFlagHandler() handler.CommandHandler {
 	return func(e *handler.CommandEvent) error {
+		db := database.GetInstance()
 		if err := e.DeferCreateMessage(true); err != nil {
-			log.Error("Failed to defer create message", "error", err)
+			log.Error("failed to defer create message", "error", err)
 			return err
 		}
 
@@ -40,9 +41,9 @@ func DeleteFlagHandler(b *ctfbot.Bot) handler.CommandHandler {
 			return err
 		}
 
-		ctf, err := b.Database.GetCTFByChannelID(e.Channel().ID(), *e.GuildID())
+		ctf, err := db.GetCTFByChannelID(e.Channel().ID(), *e.GuildID())
 		if err != nil {
-			log.Error("Failed to fetch ctf by channel id", "error", err)
+			log.Error("failed to fetch ctf by channel id", "error", err)
 			return err
 		}
 
@@ -55,7 +56,7 @@ func DeleteFlagHandler(b *ctfbot.Bot) handler.CommandHandler {
 		}
 
 		// Permission check placeholder (implement as needed)
-		err = discordutils.CheckPermission(b, e)
+		err = discordutils.CheckPermission(e)
 		if err != nil {
 			_, _ = e.CreateFollowupMessage(discord.MessageCreate{
 				Content: "You do not have permission to delete flags. ❌",
@@ -64,22 +65,22 @@ func DeleteFlagHandler(b *ctfbot.Bot) handler.CommandHandler {
 			return err
 		}
 
-		report, err := b.Database.GetReport(ctf.ID)
+		report, err := db.GetReport(ctf.ID)
 		if err != nil {
-			log.Error("Failed to fetch report for ctf", "error", err)
+			log.Error("failed to fetch report for ctf", "error", err)
 			_, _ = e.CreateFollowupMessage(discord.MessageCreate{
-				Content: "Failed to fetch report for CTF. ❌",
+				Content: "failed to fetch report for CTF. ❌",
 				Flags:   discord.MessageFlagEphemeral,
 			})
 			return err
 		}
 		if report != nil && report.Solves > 0 {
 			report.Solves -= 1
-			err = b.Database.UpdateReport(ctf.ID, *report)
+			err = db.UpdateReport(ctf.ID, *report)
 			if err != nil {
-				log.Error("Failed to update report for ctf", "error", err)
+				log.Error("failed to update report for ctf", "error", err)
 				_, _ = e.CreateFollowupMessage(discord.MessageCreate{
-					Content: "Failed to update report for CTF. ❌",
+					Content: "failed to update report for CTF. ❌",
 					Flags:   discord.MessageFlagEphemeral,
 				})
 				return err

@@ -1,10 +1,9 @@
 package commands
 
 import (
-	"ctfbot"
 	"ctftime"
+	"database"
 	"discordutils"
-	"fmt"
 	"strconv"
 	"strings"
 	"time"
@@ -19,10 +18,11 @@ var report = discord.SlashCommandCreate{
 	Description: "Generate a report for the current CTF.",
 }
 
-func ReportHandler(b *ctfbot.Bot) handler.CommandHandler {
+func ReportHandler() handler.CommandHandler {
 	return func(e *handler.CommandEvent) error {
+		db := database.GetInstance()
 		if err := e.DeferCreateMessage(true); err != nil {
-			log.Error("Failed to defer create message", "error", err)
+			log.Error("failed to defer create message", "error", err)
 			return err
 		}
 
@@ -35,9 +35,9 @@ func ReportHandler(b *ctfbot.Bot) handler.CommandHandler {
 			return err
 		}
 
-		server, err := b.Database.GetServerByID(*e.GuildID())
+		server, err := db.GetServerByID(*e.GuildID())
 		if err != nil {
-			log.Error("Failed to fetch server configuration", "error", err)
+			log.Error("failed to fetch server configuration", "error", err)
 			return err
 		}
 
@@ -49,20 +49,20 @@ func ReportHandler(b *ctfbot.Bot) handler.CommandHandler {
 			return err
 		}
 
-		if err := discordutils.CheckPermission(b, e); err != nil {
+		if err := discordutils.CheckPermission(e); err != nil {
 			return err
 		}
 
 		// Find the CTF associated with the current channel
-		ctf, err := b.Database.GetCTFByChannelID(e.Channel().ID(), *e.GuildID())
+		ctf, err := db.GetCTFByChannelID(e.Channel().ID(), *e.GuildID())
 		if err != nil {
-			log.Error("Failed to fetch CTF for channel", "error", err)
+			log.Error("failed to fetch CTF for channel", "error", err)
 			_, sendErr := e.CreateFollowupMessage(discord.MessageCreate{
-				Content: "Failed to find the CTF for this channel. ❌",
+				Content: "failed to find the CTF for this channel. ❌",
 				Flags:   discord.MessageFlagEphemeral,
 			})
 			if sendErr != nil {
-				log.Error("Failed to send followup", "error", sendErr)
+				log.Error("failed to send followup", "error", sendErr)
 				return sendErr
 			}
 			return nil
@@ -75,16 +75,16 @@ func ReportHandler(b *ctfbot.Bot) handler.CommandHandler {
 			return err
 		}
 
-		report, err := b.Database.GetReport(ctf.ID)
+		report, err := db.GetReport(ctf.ID)
 		log.Debug("Fetched report from database", "report", report)
 		if err != nil {
-			log.Error("Failed to fetch report", "error", err)
+			log.Error("failed to fetch report", "error", err)
 			_, sendErr := e.CreateFollowupMessage(discord.MessageCreate{
-				Content: "Failed to retrieve the report. ❌",
+				Content: "failed to retrieve the report. ❌",
 				Flags:   discord.MessageFlagEphemeral,
 			})
 			if sendErr != nil {
-				log.Error("Failed to send followup", "error", sendErr)
+				log.Error("failed to send followup", "error", sendErr)
 				return sendErr
 			}
 			return nil
@@ -94,13 +94,13 @@ func ReportHandler(b *ctfbot.Bot) handler.CommandHandler {
 		yearStr := strings.TrimSpace(nameParts[len(nameParts)-1])
 		year, err := strconv.Atoi(yearStr)
 		if err != nil {
-			log.Error("Failed to parse year from CTF name", "error", err)
+			log.Error("failed to parse year from CTF name", "error", err)
 			year = time.Now().Year()
 		}
 
 		// If report data is missing, fetch from CTFTime
 		// Check if the report was updated in the last day
-		var isRecent bool = false
+		isRecent := false
 		if report != nil {
 			if time.Since(report.LastUpdate) < 24*time.Hour {
 				isRecent = true
@@ -110,28 +110,28 @@ func ReportHandler(b *ctfbot.Bot) handler.CommandHandler {
 			log.Debug("Fetching from CTFTime", "ctf_id", ctf.ID)
 			results, err := ctftime.GetResultsInfo(ctf.CTFTimeID, year, server.TeamID)
 			if err != nil {
-				log.Error("Failed to fetch results from CTFTime", "error", err)
+				log.Error("failed to fetch results from CTFTime", "error", err)
 				_, sendErr := e.CreateFollowupMessage(discord.MessageCreate{
-					Content: "Failed to retrieve the report from CTFTime. ❌",
+					Content: "failed to retrieve the report from CTFTime. ❌",
 					Flags:   discord.MessageFlagEphemeral,
 				})
 				if sendErr != nil {
-					log.Error("Failed to send followup", "error", sendErr)
+					log.Error("failed to send followup", "error", sendErr)
 					return sendErr
 				}
 				return nil
 			}
 			if results != nil {
 				report = results
-				err = b.Database.UpdateReport(ctf.ID, *report)
+				err = db.UpdateReport(ctf.ID, *report)
 				if err != nil {
-					log.Error("Failed to update report in database", "error", err)
+					log.Error("failed to update report in database", "error", err)
 				}
 			}
 		}
 
 		embed := discord.Embed{
-			Title: fmt.Sprintf("Report for %s", ctf.Name),
+			Title: "Report for " + ctf.Name,
 			Color: discordutils.ColorBlurple,
 			Fields: []discord.EmbedField{
 				{
@@ -154,7 +154,7 @@ func ReportHandler(b *ctfbot.Bot) handler.CommandHandler {
 				},
 				{
 					Name:  "Solves",
-					Value: fmt.Sprintf("%d", report.Solves),
+					Value: strconv.Itoa(report.Solves),
 				},
 			},
 			Timestamp: &time.Time{},

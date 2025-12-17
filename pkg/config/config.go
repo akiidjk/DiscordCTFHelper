@@ -9,6 +9,11 @@ import (
 	"github.com/disgoorg/snowflake/v2"
 )
 
+var (
+	Version = "dev"
+	Commit  = "2.0.0"
+)
+
 func LoadConfig() (*Config, error) {
 	level, err := log.ParseLevel(strings.ToUpper(os.Getenv("LOG_LEVEL")))
 	if err != nil {

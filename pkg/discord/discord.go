@@ -1,13 +1,14 @@
 package discordutils
 
 import (
-	"ctfbot"
 	"ctftime"
+	"database"
 	"errors"
 	"fmt"
 	"time"
 
 	"github.com/charmbracelet/log"
+	"github.com/disgoorg/disgo/bot"
 	"github.com/disgoorg/disgo/discord"
 	"github.com/disgoorg/disgo/handler"
 	"github.com/disgoorg/disgo/rest"
@@ -15,9 +16,10 @@ import (
 	"golang.org/x/exp/rand"
 )
 
-const MAX_DESC_LENGTH = 4096
+const MaxDescLength = 4096
 
-func CheckPermission(b *ctfbot.Bot, e *handler.CommandEvent) error {
+func CheckPermission(e *handler.CommandEvent) error {
+	db := database.GetInstance()
 	sendEphemeral := func(content string) error {
 		_, err := e.CreateFollowupMessage(discord.MessageCreate{
 			Content: content,
@@ -31,12 +33,12 @@ func CheckPermission(b *ctfbot.Bot, e *handler.CommandEvent) error {
 		return sendEphemeral("Guild not found. ❌")
 	}
 
-	guild, err := b.Client.Rest.GetGuild(*guildID, false)
+	guild, err := e.Client().Rest.GetGuild(*guildID, false)
 	if err != nil {
 		return err
 	}
 
-	server, err := b.Database.GetServerByID(*guildID)
+	server, err := db.GetServerByID(*guildID)
 	if err != nil {
 		return err
 	}
@@ -70,7 +72,7 @@ func CheckPermission(b *ctfbot.Bot, e *handler.CommandEvent) error {
 	return nil
 }
 
-func CreateEvents(b *ctfbot.Bot, guildID *snowflake.ID, info ctftime.Event, eventDescription string, startTime time.Time, endTime time.Time) (discord.GuildScheduledEvent, error) {
+func CreateEvents(client *bot.Client, guildID *snowflake.ID, info ctftime.Event, eventDescription string, startTime time.Time, endTime time.Time) (discord.GuildScheduledEvent, error) {
 	var image *discord.Icon
 	if info.Logo != "" {
 		imageLogo, imageType, err := ctftime.GetLogo(info.Logo)
@@ -85,7 +87,7 @@ func CreateEvents(b *ctfbot.Bot, guildID *snowflake.ID, info ctftime.Event, even
 		}
 	}
 
-	scheduledEvent, err := b.Client.Rest.CreateGuildScheduledEvent(*guildID, discord.GuildScheduledEventCreate{
+	scheduledEvent, err := client.Rest.CreateGuildScheduledEvent(*guildID, discord.GuildScheduledEventCreate{
 		Name:               info.Title,
 		Description:        eventDescription,
 		ScheduledStartTime: startTime,
@@ -99,7 +101,7 @@ func CreateEvents(b *ctfbot.Bot, guildID *snowflake.ID, info ctftime.Event, even
 	})
 	if err != nil {
 		if restErr, ok := err.(*rest.Error); ok && restErr.Message == "Unsupported image type given" {
-			return CreateEvents(b, guildID, info, eventDescription, startTime, endTime)
+			return CreateEvents(client, guildID, info, eventDescription, startTime, endTime)
 		}
 		return discord.GuildScheduledEvent{}, err
 	}
@@ -107,7 +109,7 @@ func CreateEvents(b *ctfbot.Bot, guildID *snowflake.ID, info ctftime.Event, even
 	return *scheduledEvent, nil
 }
 
-func CreateChannel(b *ctfbot.Bot, guildID *snowflake.ID, channelName string, categoryID snowflake.ID, roleID snowflake.ID, managerID snowflake.ID) (*discord.GuildChannel, error) {
+func CreateChannel(client *bot.Client, guildID *snowflake.ID, channelName string, categoryID snowflake.ID, roleID snowflake.ID, managerID snowflake.ID) (*discord.GuildChannel, error) {
 	log.Debug("CreateChannel called with",
 		"channelName", channelName,
 		"categoryID", categoryID,
@@ -116,19 +118,19 @@ func CreateChannel(b *ctfbot.Bot, guildID *snowflake.ID, channelName string, cat
 	)
 
 	log.Debug("Fetching category channel", "categoryID", categoryID)
-	category, err := b.Client.Rest.GetChannel(categoryID)
+	category, err := client.Rest.GetChannel(categoryID)
 	if err != nil {
-		log.Debug("Failed to fetch category channel", "err", err)
+		log.Debug("failed to fetch category channel", "err", err)
 	}
 	if err != nil || category.Type() != discord.ChannelTypeGuildCategory {
 		log.Debug("Category channel is invalid or not a category", "type", category.Type())
-		return nil, errors.New("Invalid category")
+		return nil, errors.New("invalid category")
 	}
 
 	var everyoneID *snowflake.ID
-	roles, err := b.Client.Rest.GetRoles(*guildID)
+	roles, err := client.Rest.GetRoles(*guildID)
 	if err != nil {
-		log.Debug("Failed to fetch roles", "err", err)
+		log.Debug("failed to fetch roles", "err", err)
 		return nil, err
 	}
 	for _, role := range roles {
@@ -141,14 +143,14 @@ func CreateChannel(b *ctfbot.Bot, guildID *snowflake.ID, channelName string, cat
 
 	if everyoneID == nil {
 		log.Debug("Could not find @everyone role in guild", "guildID", *guildID)
-		return nil, errors.New("Could not find @everyone role in guild")
+		return nil, errors.New("could not find @everyone role in guild")
 	}
 
 	log.Debug("Creating guild text channel",
 		"channelName", channelName,
 		"categoryID", categoryID,
 	)
-	channel, err := b.Client.Rest.CreateGuildChannel(*guildID, discord.GuildTextChannelCreate{
+	channel, err := client.Rest.CreateGuildChannel(*guildID, discord.GuildTextChannelCreate{
 		Name:     channelName,
 		ParentID: categoryID,
 		PermissionOverwrites: []discord.PermissionOverwrite{
@@ -167,7 +169,7 @@ func CreateChannel(b *ctfbot.Bot, guildID *snowflake.ID, channelName string, cat
 		},
 	})
 	if err != nil {
-		log.Debug("Failed to create guild channel", "err", err)
+		log.Debug("failed to create guild channel", "err", err)
 		return nil, err
 	}
 
@@ -178,7 +180,7 @@ func CreateChannel(b *ctfbot.Bot, guildID *snowflake.ID, channelName string, cat
 	return &channel, nil
 }
 
-func CreateEmbed(b *ctfbot.Bot, data ctftime.Event, startTime time.Time, endTime time.Time, channel discord.Channel) (*discord.Message, error) {
+func CreateEmbed(client *bot.Client, data ctftime.Event, startTime time.Time, endTime time.Time, channel discord.Channel) (*discord.Message, error) {
 	description := fmt.Sprintf(`
 **Description:**
 
@@ -189,7 +191,7 @@ func CreateEmbed(b *ctfbot.Bot, data ctftime.Event, startTime time.Time, endTime
 - **URL:** %s
 - **Format:** %s
 - **Location:** %s
-- **Weight:** %s
+- **Weight:** %f
 - **Prizes:**
 %s
 
@@ -210,7 +212,7 @@ func CreateEmbed(b *ctfbot.Bot, data ctftime.Event, startTime time.Time, endTime
 		},
 	}
 
-	message, err := b.Client.Rest.CreateMessage(channel.ID(), discord.MessageCreate{
+	message, err := client.Rest.CreateMessage(channel.ID(), discord.MessageCreate{
 		Embeds: []discord.Embed{embed},
 	})
 	if err != nil {
@@ -218,7 +220,7 @@ func CreateEmbed(b *ctfbot.Bot, data ctftime.Event, startTime time.Time, endTime
 	}
 
 	// Add reaction
-	err = b.Client.Rest.AddReaction(channel.ID(), message.ID, "✅")
+	err = client.Rest.AddReaction(channel.ID(), message.ID, "✅")
 	if err != nil {
 		return nil, err
 	}
@@ -226,7 +228,7 @@ func CreateEmbed(b *ctfbot.Bot, data ctftime.Event, startTime time.Time, endTime
 	return message, nil
 }
 
-func CreateRole(b *ctfbot.Bot, guildID *snowflake.ID, name string) (*discord.Role, error) {
+func CreateRole(client *bot.Client, guildID *snowflake.ID, name string) (*discord.Role, error) {
 	if guildID == nil {
 		return nil, nil
 	}
@@ -236,7 +238,7 @@ func CreateRole(b *ctfbot.Bot, guildID *snowflake.ID, name string) (*discord.Rol
 		color = rand.Intn(0xFFFFFF)
 	}
 
-	role, err := b.Client.Rest.CreateRole(*guildID, discord.RoleCreate{
+	role, err := client.Rest.CreateRole(*guildID, discord.RoleCreate{
 		Name:        name,
 		Color:       color,
 		Mentionable: true,

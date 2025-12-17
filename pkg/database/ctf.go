@@ -15,7 +15,7 @@ func (db *Database) AddCTF(ctf CTFModel) error {
 		ctf.ServerID, ctf.Name, ctf.Description, ctf.TextChannelID, ctf.EventID, ctf.RoleID, ctf.MsgID, ctf.CTFTimeID,
 	)
 	if err != nil {
-		log.Error("Failed to insert CTF", "err", err)
+		log.Error("failed to insert CTF", "err", err)
 		return err
 	}
 	return nil
@@ -35,7 +35,7 @@ func (db *Database) GetCTFByName(name string, serverID snowflake.ID) (*CTFModel,
 		return nil, nil
 	}
 	if err != nil {
-		log.Error("Failed to query CTF by name", "err", err)
+		log.Error("failed to query CTF by name", "err", err)
 		return nil, err
 	}
 
@@ -57,7 +57,7 @@ func (db *Database) GetCTFByID(id int64) (*CTFModel, error) {
 		return nil, nil
 	}
 	if err != nil {
-		log.Error("Failed to query CTF by ID", "err", err)
+		log.Error("failed to query CTF by ID", "err", err)
 		return nil, err
 	}
 
@@ -66,20 +66,20 @@ func (db *Database) GetCTFByID(id int64) (*CTFModel, error) {
 }
 
 // GetCTFByID retrieves a CTF from the database by its ID.
-func (db *Database) GetCTFByCTFTimeID(ctftime_id int64) (*CTFModel, error) {
+func (db *Database) GetCTFByCTFTimeID(ctftimeID int64) (*CTFModel, error) {
 	var ctf CTFModel
 	err := db.connection.QueryRow(
 		`SELECT id, server_id, name, description, text_channel_id, event_id, role_id, msg_id, ctftime_id
 		FROM ctfs WHERE ctftime_id = ?`,
-		ctftime_id,
+		ctftimeID,
 	).Scan(&ctf.ID, &ctf.ServerID, &ctf.Name, &ctf.Description, &ctf.TextChannelID, &ctf.EventID, &ctf.RoleID, &ctf.MsgID, &ctf.CTFTimeID)
 
 	if err == sql.ErrNoRows {
-		log.Debug("CTF not found", "ctftime_id", ctftime_id)
+		log.Debug("CTF not found", "ctftime_id", ctftimeID)
 		return nil, nil
 	}
 	if err != nil {
-		log.Error("Failed to query CTF by ID", "err", err)
+		log.Error("failed to query CTF by ID", "err", err)
 		return nil, err
 	}
 
@@ -91,7 +91,7 @@ func (db *Database) GetCTFByCTFTimeID(ctftime_id int64) (*CTFModel, error) {
 func (db *Database) DeleteCTF(ctfID int64) bool {
 	_, err := db.connection.Exec("DELETE FROM ctfs WHERE id = ?", ctfID)
 	if err != nil {
-		log.Error("Failed to delete CTF", "err", err)
+		log.Error("failed to delete CTF", "err", err)
 		return false
 	}
 	return true
@@ -111,7 +111,7 @@ func (db *Database) GetCTFByMessageID(messageID, serverID snowflake.ID) (*CTFMod
 		return nil, nil
 	}
 	if err != nil {
-		log.Error("Failed to query CTF by message ID", "err", err)
+		log.Error("failed to query CTF by message ID", "err", err)
 		return nil, err
 	}
 
@@ -133,7 +133,7 @@ func (db *Database) GetCTFByChannelID(channelID, serverID snowflake.ID) (*CTFMod
 		return nil, nil
 	}
 	if err != nil {
-		log.Error("Failed to query CTF by channel ID", "err", err)
+		log.Error("failed to query CTF by channel ID", "err", err)
 		return nil, err
 	}
 
@@ -154,7 +154,7 @@ func (db *Database) IsCTFPresent(name string, serverID snowflake.ID) (bool, erro
 		return false, nil
 	}
 	if err != nil {
-		log.Error("Failed to check CTF presence", "err", err)
+		log.Error("failed to check CTF presence", "err", err)
 		return false, err
 	}
 
@@ -170,7 +170,7 @@ func (db *Database) GetCTFsList(serverID snowflake.ID) ([]CTFModel, error) {
 		serverID,
 	)
 	if err != nil {
-		log.Error("Failed to query CTFs list", "err", err)
+		log.Error("failed to query CTFs list", "err", err)
 		return nil, err
 	}
 	defer rows.Close()
@@ -180,7 +180,7 @@ func (db *Database) GetCTFsList(serverID snowflake.ID) ([]CTFModel, error) {
 		var ctf CTFModel
 		err := rows.Scan(&ctf.ID, &ctf.ServerID, &ctf.Name, &ctf.Description, &ctf.TextChannelID, &ctf.EventID, &ctf.RoleID, &ctf.MsgID, &ctf.CTFTimeID)
 		if err != nil {
-			log.Error("Failed to scan CTF row", "err", err)
+			log.Error("failed to scan CTF row", "err", err)
 			continue
 		}
 		ctfs = append(ctfs, ctf)

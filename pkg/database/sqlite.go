@@ -20,7 +20,7 @@ func (db *Database) Close() {
 	if db.connection != nil {
 		err := db.connection.Close()
 		if err != nil {
-			log.Error("Failed to close database", "err", err)
+			log.Error("failed to close database", "err", err)
 		}
 	}
 }
@@ -57,7 +57,7 @@ func Setup() *Database {
 		dbInstance = &Database{}
 		err := dbInstance.Init()
 		if err != nil {
-			log.Fatal("Failed to setup database", "err", err)
+			log.Fatal("failed to setup database", "err", err)
 		}
 	}
 	return dbInstance

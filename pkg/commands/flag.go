@@ -1,7 +1,6 @@
 package commands
 
 import (
-	"ctfbot"
 	"database"
 	"fmt"
 
@@ -32,12 +31,13 @@ var flag = discord.SlashCommandCreate{
 	},
 }
 
-func FlagHandler(b *ctfbot.Bot) handler.CommandHandler {
+func FlagHandler() handler.CommandHandler {
 	return func(e *handler.CommandEvent) error {
+		db := database.GetInstance()
 		client := e.Client()
 
 		if err := e.DeferCreateMessage(true); err != nil {
-			log.Error("Failed to defer create message", "error", err)
+			log.Error("failed to defer create message", "error", err)
 			return err
 		}
 
@@ -55,20 +55,20 @@ func FlagHandler(b *ctfbot.Bot) handler.CommandHandler {
 		mate, okMate := options.OptMember("mate")
 		challengeName, okChallenge := options.OptString("challenge_name")
 
-		ctf, err := b.Database.GetCTFByChannelID(e.Channel().ID(), *e.GuildID())
+		ctf, err := db.GetCTFByChannelID(e.Channel().ID(), *e.GuildID())
 		if err != nil {
-			log.Error("Failed to fetch ctf by channel id", "error", err)
+			log.Error("failed to fetch ctf by channel id", "error", err)
 			return err
 		}
 
-		report, err := b.Database.GetReport(ctf.ID)
+		report, err := db.GetReport(ctf.ID)
 		if err != nil {
-			log.Error("Failed to fetch report for ctf", "error", err)
+			log.Error("failed to fetch report for ctf", "error", err)
 			return err
 		}
 
 		if report == nil {
-			b.Database.AddReport(
+			db.AddReport(
 				database.ReportModel{
 					CTFID:  ctf.ID,
 					Place:  -1,
@@ -78,7 +78,7 @@ func FlagHandler(b *ctfbot.Bot) handler.CommandHandler {
 			)
 		} else {
 			report.Solves += 1
-			b.Database.UpdateReport(ctf.ID, *report)
+			db.UpdateReport(ctf.ID, *report)
 		}
 
 		content := fmt.Sprintf("<@&%s> NEW FLAG FOUND BY %s", ctf.RoleID, e.User().Mention())
@@ -95,13 +95,13 @@ func FlagHandler(b *ctfbot.Bot) handler.CommandHandler {
 			Content: content,
 		})
 		if err != nil {
-			log.Error("Failed to send flag message", "error", err)
+			log.Error("failed to send flag message", "error", err)
 			return err
 		}
 
 		err = client.Rest.AddReaction(e.Channel().ID(), msg.ID, "🔥")
 		if err != nil {
-			log.Error("Failed to add reaction to flag message", "error", err)
+			log.Error("failed to add reaction to flag message", "error", err)
 			return err
 		}
 

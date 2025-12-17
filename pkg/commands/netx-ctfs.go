@@ -1,7 +1,6 @@
 package commands
 
 import (
-	"ctfbot"
 	"ctftime"
 	"fmt"
 	"strings"
@@ -25,7 +24,7 @@ type CTF struct {
 	Format string
 }
 
-var next_ctfs = discord.SlashCommandCreate{
+var nextCTFs = discord.SlashCommandCreate{
 	Name:        "next-ctfs",
 	Description: "List the next ctfs on ctftime.",
 	Options: []discord.ApplicationCommandOption{
@@ -42,7 +41,7 @@ var next_ctfs = discord.SlashCommandCreate{
 	},
 }
 
-func NextCTFsHandler(b *ctfbot.Bot) handler.CommandHandler {
+func NextCTFsHandler() handler.CommandHandler {
 	return func(e *handler.CommandEvent) error {
 		options := e.SlashCommandInteractionData()
 		ephemeral, ok := options.OptBool("ephemeral")
@@ -69,7 +68,7 @@ func NextCTFsHandler(b *ctfbot.Bot) handler.CommandHandler {
 		ctfs, err := ctftime.GetCTFs()
 		if err != nil {
 			_, err = e.CreateFollowupMessage(discord.MessageCreate{
-				Content: "Failed to get CTFs.",
+				Content: "failed to get CTFs.",
 			})
 			return err
 		}

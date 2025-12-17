@@ -15,7 +15,7 @@ func (db *Database) AddReport(report ReportModel) error {
 		report.CTFID, report.Place, report.Solves, report.Score,
 	)
 	if err != nil {
-		log.Error("Failed to insert report", "err", err)
+		log.Error("failed to insert report", "err", err)
 		return err
 	}
 	return nil
@@ -34,14 +34,14 @@ func (db *Database) GetReport(ctfID int64) (*ReportModel, error) {
 		return nil, nil
 	}
 	if err != nil {
-		log.Error("Failed to query report", "err", err)
+		log.Error("failed to query report", "err", err)
 		return nil, err
 	}
 
 	// Parse lastUpdateStr into time.Time
 	lastUpdate, err := time.Parse("2006-01-02 15:04:05", lastUpdateStr)
 	if err != nil {
-		log.Error("Failed to parse last_update", "err", err, "value", lastUpdateStr)
+		log.Error("failed to parse last_update", "err", err, "value", lastUpdateStr)
 		return nil, err
 	}
 	report.LastUpdate = lastUpdate
@@ -56,13 +56,13 @@ func (db *Database) UpdateReport(ctfID int64, report ReportModel) error {
 		report.Place, report.Solves, report.Score, ctfID,
 	)
 	if err != nil {
-		log.Error("Failed to update report", "err", err)
+		log.Error("failed to update report", "err", err)
 		return err
 	}
 
 	rowsAffected, err := res.RowsAffected()
 	if err != nil {
-		log.Error("Failed to get rows affected after update", "err", err)
+		log.Error("failed to get rows affected after update", "err", err)
 		return err
 	}
 
@@ -72,7 +72,7 @@ func (db *Database) UpdateReport(ctfID int64, report ReportModel) error {
 			ctfID, report.Place, report.Solves, report.Score,
 		)
 		if err != nil {
-			log.Error("Failed to insert report after update not found", "err", err)
+			log.Error("failed to insert report after update not found", "err", err)
 			return err
 		}
 	}

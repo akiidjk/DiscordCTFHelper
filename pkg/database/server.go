@@ -15,7 +15,7 @@ func (db *Database) AddServer(server ServerModel) error {
 		server.ID, server.ActiveCategoryID, server.ArchiveCategoryID, server.RoleManagerID, server.FeedChannelID, server.TeamID, server.RoleTeamID,
 	)
 	if err != nil {
-		log.Error("Failed to insert server", "err", err)
+		log.Error("failed to insert server", "err", err)
 		return err
 	}
 	return nil
@@ -34,7 +34,7 @@ func (db *Database) GetServerByID(serverID snowflake.ID) (*ServerModel, error) {
 		return nil, nil
 	}
 	if err != nil {
-		log.Error("Failed to query server", "err", err)
+		log.Error("failed to query server", "err", err)
 		return nil, err
 	}
 
@@ -48,7 +48,7 @@ func (db *Database) EditCategory(server ServerModel) error {
 		server.ActiveCategoryID, server.ArchiveCategoryID, server.ID,
 	)
 	if err != nil {
-		log.Error("Failed to update server categories", "err", err)
+		log.Error("failed to update server categories", "err", err)
 		return err
 	}
 	return nil
@@ -58,7 +58,7 @@ func (db *Database) EditCategory(server ServerModel) error {
 func (db *Database) DeleteServer(serverID snowflake.ID) error {
 	_, err := db.connection.Exec("DELETE FROM servers WHERE id = ?", serverID)
 	if err != nil {
-		log.Error("Failed to delete server", "err", err)
+		log.Error("failed to delete server", "err", err)
 		return err
 	}
 	return nil

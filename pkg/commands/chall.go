@@ -1,7 +1,7 @@
 package commands
 
 import (
-	"ctfbot"
+	"database"
 	"discordutils"
 
 	"github.com/charmbracelet/log"
@@ -32,15 +32,16 @@ var chall = discord.SlashCommandCreate{
 	},
 }
 
-func ChallHandler(b *ctfbot.Bot) handler.CommandHandler {
+func ChallHandler() handler.CommandHandler {
 	return func(e *handler.CommandEvent) error {
+		db := database.GetInstance()
 		options := e.SlashCommandInteractionData()
 		name := options.String("name")
 		description, _ := options.OptString("description")
 		category, _ := options.OptString("category")
 
 		if err := e.DeferCreateMessage(true); err != nil {
-			log.Error("Failed to defer create message", "error", err)
+			log.Error("failed to defer create message", "error", err)
 			return err
 		}
 
@@ -53,16 +54,16 @@ func ChallHandler(b *ctfbot.Bot) handler.CommandHandler {
 			return err
 		}
 
-		if err := discordutils.CheckPermission(b, e); err != nil {
+		if err := discordutils.CheckPermission(e); err != nil {
 			return err
 		}
 
-		ctf, err := b.Database.GetCTFByChannelID(
+		ctf, err := db.GetCTFByChannelID(
 			e.Channel().ID(),
 			*e.GuildID(),
 		)
 		if err != nil {
-			log.Error("Failed to fetch CTF by channel ID", "error", err)
+			log.Error("failed to fetch CTF by channel ID", "error", err)
 			return err
 		}
 		if ctf == nil {
@@ -96,11 +97,11 @@ func ChallHandler(b *ctfbot.Bot) handler.CommandHandler {
 			Embeds: []discord.Embed{embed},
 		})
 		if err != nil {
-			log.Error("Failed to create message", "error", err)
+			log.Error("failed to create message", "error", err)
 			return err
 		}
 
-		b.Client.Rest.CreateThreadFromMessage(e.Channel().ID(), createdMsg.ID, discord.ThreadCreateFromMessage{
+		e.Client().Rest.CreateThreadFromMessage(e.Channel().ID(), createdMsg.ID, discord.ThreadCreateFromMessage{
 			Name:                name,
 			AutoArchiveDuration: discord.AutoArchiveDuration3d,
 		})
@@ -110,7 +111,7 @@ func ChallHandler(b *ctfbot.Bot) handler.CommandHandler {
 			Flags:   discord.MessageFlagEphemeral,
 		})
 		if err != nil {
-			log.Error("Failed to send followup", "error", err)
+			log.Error("failed to send followup", "error", err)
 			return err
 		}
 

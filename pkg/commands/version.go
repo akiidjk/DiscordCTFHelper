@@ -1,7 +1,7 @@
 package commands
 
 import (
-	"ctfbot"
+	"config"
 	"fmt"
 
 	"github.com/disgoorg/disgo/discord"
@@ -13,10 +13,10 @@ var version = discord.SlashCommandCreate{
 	Description: "version command",
 }
 
-func VersionHandler(b *ctfbot.Bot) handler.CommandHandler {
+func VersionHandler() handler.CommandHandler {
 	return func(e *handler.CommandEvent) error {
 		return e.CreateMessage(discord.MessageCreate{
-			Content: fmt.Sprintf("Version: %s\nCommit: %s", b.Version, b.Commit),
+			Content: fmt.Sprintf("Version: %s\nCommit: %s", config.Version, config.Commit),
 		})
 	}
 }

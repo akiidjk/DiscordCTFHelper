@@ -1,7 +1,6 @@
 package commands
 
 import (
-	"ctfbot"
 	"database"
 	"discordutils"
 	"fmt"
@@ -18,8 +17,9 @@ var creds = discord.SlashCommandCreate{
 	Description: "Setup creds for the ctf.",
 }
 
-func CredsHandler(b *ctfbot.Bot) handler.CommandHandler {
+func CredsHandler() handler.CommandHandler {
 	return func(e *handler.CommandEvent) error {
+		db := database.GetInstance()
 		if e.GuildID() == nil {
 			log.Warn("Report command used outside of a guild", "user_id", e.User().ID)
 			_, err := e.CreateFollowupMessage(discord.MessageCreate{
@@ -29,9 +29,9 @@ func CredsHandler(b *ctfbot.Bot) handler.CommandHandler {
 			return err
 		}
 
-		server, err := b.Database.GetServerByID(*e.GuildID())
+		server, err := db.GetServerByID(*e.GuildID())
 		if err != nil {
-			log.Error("Failed to fetch server configuration", "error", err)
+			log.Error("failed to fetch server configuration", "error", err)
 			return err
 		}
 
@@ -43,13 +43,13 @@ func CredsHandler(b *ctfbot.Bot) handler.CommandHandler {
 			return err
 		}
 
-		if err := discordutils.CheckPermission(b, e); err != nil {
+		if err := discordutils.CheckPermission(e); err != nil {
 			return err
 		}
 
-		ctf, err := b.Database.GetCTFByChannelID(e.Channel().ID(), *e.GuildID())
+		ctf, err := db.GetCTFByChannelID(e.Channel().ID(), *e.GuildID())
 		if err != nil {
-			log.Error("Failed to fetch CTF by channel ID", "error", err)
+			log.Error("failed to fetch CTF by channel ID", "error", err)
 			return err
 		}
 
@@ -61,9 +61,9 @@ func CredsHandler(b *ctfbot.Bot) handler.CommandHandler {
 			return err
 		}
 
-		creds, err := b.Database.GetCreds(ctf.ID)
+		creds, err := db.GetCreds(ctf.ID)
 		if err != nil {
-			log.Error("Failed to fetch creds by CTF ID", "error", err)
+			log.Error("failed to fetch creds by CTF ID", "error", err)
 			return err
 		}
 
@@ -104,7 +104,7 @@ func CredsHandler(b *ctfbot.Bot) handler.CommandHandler {
 			// Show creds in an embed
 			log.Info("Credentials found for CTF, displaying", "ctf_id", ctf.ID)
 			if err := e.DeferCreateMessage(true); err != nil {
-				log.Error("Failed to defer create message", "error", err)
+				log.Error("failed to defer create message", "error", err)
 				return err
 			}
 			description := fmt.Sprintf("**Username:** `%s`\n**Password:** `%s`\n**Need personal:** ", creds.Username, creds.Password)

@@ -1,7 +1,6 @@
 package commands
 
 import (
-	"ctfbot"
 	"database"
 
 	"github.com/charmbracelet/log"
@@ -55,13 +54,14 @@ var cinit = discord.SlashCommandCreate{
 	},
 }
 
-func InitHandler(b *ctfbot.Bot) handler.CommandHandler {
+func InitHandler() handler.CommandHandler {
 	log.Info("Setting up InitHandler")
 	return func(e *handler.CommandEvent) error {
+		db := database.GetInstance()
 		log.Debug("InitHandler called", "guild_id", e.GuildID())
 
 		if err := e.DeferCreateMessage(true); err != nil {
-			log.Error("Failed to defer create message", "error", err)
+			log.Error("failed to defer create message", "error", err)
 			return err
 		}
 
@@ -102,21 +102,21 @@ func InitHandler(b *ctfbot.Bot) handler.CommandHandler {
 			"guild_id", e.GuildID(),
 		)
 
-		server, err := b.Database.GetServerByID(*e.GuildID())
+		server, err := db.GetServerByID(*e.GuildID())
 		if err != nil {
-			log.Error("Failed to get server by ID", "guild_id", e.GuildID(), "error", err)
+			log.Error("failed to get server by ID", "guild_id", e.GuildID(), "error", err)
 			return err
 		}
 		if server != nil {
 			log.Info("Server already exists, deleting old config", "guild_id", e.GuildID())
-			if err := b.Database.DeleteServer(*e.GuildID()); err != nil {
-				log.Error("Failed to delete existing server config", "guild_id", e.GuildID(), "error", err)
+			if err := db.DeleteServer(*e.GuildID()); err != nil {
+				log.Error("failed to delete existing server config", "guild_id", e.GuildID(), "error", err)
 				return err
 			}
 		}
 
 		log.Info("Adding new server config", "guild_id", e.GuildID())
-		if err := b.Database.AddServer(database.ServerModel{
+		if err := db.AddServer(database.ServerModel{
 			ID:                *e.GuildID(),
 			ActiveCategoryID:  categoryActive.ID,
 			ArchiveCategoryID: archiveCategory.ID,
@@ -125,7 +125,7 @@ func InitHandler(b *ctfbot.Bot) handler.CommandHandler {
 			TeamID:            int64(teamID),
 			RoleTeamID:        roleTeam.ID,
 		}); err != nil {
-			log.Error("Failed to add server config", "guild_id", e.GuildID(), "error", err)
+			log.Error("failed to add server config", "guild_id", e.GuildID(), "error", err)
 			return err
 		}
 

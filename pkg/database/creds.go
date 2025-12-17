@@ -14,26 +14,24 @@ func (db *Database) AddCreds(username, password string, personal bool, ctfID int
 	err := db.connection.QueryRow("SELECT 1 FROM creds WHERE ctf_id = ?", ctfID).Scan(&exists)
 
 	if err == sql.ErrNoRows {
-		// Insert new credentials
 		_, err = db.connection.Exec(
 			`INSERT INTO creds (username, password, personal, ctf_id) VALUES (?, ?, ?, ?)`,
 			username, password, personal, ctfID,
 		)
 		if err != nil {
-			log.Error("Failed to insert credentials", "err", err)
+			log.Error("failed to insert credentials", "err", err)
 			return err
 		}
 	} else if err != nil {
-		log.Error("Failed to check existing credentials", "err", err)
+		log.Error("failed to check existing credentials", "err", err)
 		return err
 	} else {
-		// Update existing credentials
 		_, err = db.connection.Exec(
 			`UPDATE creds SET username = ?, password = ?, personal = ? WHERE ctf_id = ?`,
 			username, password, personal, ctfID,
 		)
 		if err != nil {
-			log.Error("Failed to update credentials", "err", err)
+			log.Error("failed to update credentials", "err", err)
 			return err
 		}
 	}
@@ -45,7 +43,7 @@ func (db *Database) AddCreds(username, password string, personal bool, ctfID int
 func (db *Database) DeleteCreds(ctfID int64) bool {
 	_, err := db.connection.Exec("DELETE FROM creds WHERE ctf_id = ?", ctfID)
 	if err != nil {
-		log.Error("Failed to delete credentials", "err", err)
+		log.Error("failed to delete credentials", "err", err)
 		return false
 	}
 	return true
@@ -58,7 +56,7 @@ func (db *Database) GetCreds(ctfID int64) (CredsModel, error) {
 		ctfID,
 	)
 	if err != nil {
-		log.Error("Failed to query credentials", "err", err)
+		log.Error("failed to query credentials", "err", err)
 		return CredsModel{}, err
 	}
 	defer rows.Close()
@@ -68,7 +66,7 @@ func (db *Database) GetCreds(ctfID int64) (CredsModel, error) {
 		var cred CredsModel
 		err := rows.Scan(&cred.ID, &cred.Username, &cred.Password, &cred.Personal, &cred.CTFID)
 		if err != nil {
-			log.Error("Failed to scan credential row", "err", err)
+			log.Error("failed to scan credential row", "err", err)
 			continue
 		}
 		creds = append(creds, cred)

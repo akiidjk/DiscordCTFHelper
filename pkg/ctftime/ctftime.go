@@ -19,9 +19,9 @@ import (
 	"github.com/charmbracelet/log"
 )
 
-const BASE_URL = "https://ctftime.org/api/v1"
+const BaseURL = "https://ctftime.org/api/v1"
 
-var USER_AGENT_LIST = []string{
+var UserAgentList = []string{
 	"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/13.0.5 Safari/605.1.15",
 	"Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/103.0.5060.53 Safari/537.36",
 	"Mozilla/5.0 (Windows NT 10.0; Windows; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/103.0.5060.114 Safari/537.36",
@@ -35,11 +35,11 @@ var USER_AGENT_LIST = []string{
 }
 
 func pickRandomAgent() string {
-	return USER_AGENT_LIST[rand.Intn(len(USER_AGENT_LIST))]
+	return UserAgentList[rand.Intn(len(UserAgentList))]
 }
 
 func createRequest(url string) (*http.Request, error) {
-	req, err := http.NewRequest("GET", url, nil)
+	req, err := http.NewRequest(http.MethodGet, url, nil)
 
 	if err == nil {
 		req.Header.Set("User-Agent", pickRandomAgent())
@@ -87,12 +87,16 @@ func GetLogo(url string) ([]byte, string, error) {
 	return data, format, nil
 }
 
-func GetCTFInfo(ctftime_id int) (Event, error) {
-	idParsed := strconv.Itoa(ctftime_id)
-	url := BASE_URL + "/events/" + idParsed + "/"
+func GetCTFInfo(ctftimeID int) (Event, error) {
+	idParsed := strconv.Itoa(ctftimeID)
+	url := BaseURL + "/events/" + idParsed + "/"
 	log.Debug("Fetching CTF info from URL:", "url", url)
 	client := &http.Client{}
 	req, err := createRequest(url)
+	if err != nil {
+		log.Error("Error creating request for CTF info:", "err", err)
+		return Event{}, err
+	}
 
 	resp, err := client.Do(req)
 	if err != nil {
@@ -101,20 +105,20 @@ func GetCTFInfo(ctftime_id int) (Event, error) {
 	}
 	defer resp.Body.Close()
 
-	var parsedJson Event
+	var parsedJSON Event
 	if resp.StatusCode != http.StatusOK {
 		return Event{}, fmt.Errorf("status %d", resp.StatusCode)
 	}
-	err = json.NewDecoder(resp.Body).Decode(&parsedJson)
+	err = json.NewDecoder(resp.Body).Decode(&parsedJSON)
 	if err != nil {
 		return Event{}, err
 	}
 
-	return parsedJson, nil
+	return parsedJSON, nil
 }
 
 func GetCTFs() ([]Event, error) {
-	url := BASE_URL + "/events/"
+	url := BaseURL + "/events/"
 	log.Debug("Fetching CTFs from URL:", "url", url)
 	client := &http.Client{}
 	req, err := createRequest(url)
@@ -132,7 +136,7 @@ func GetCTFs() ([]Event, error) {
 
 	log.Debug("Received response for CTFs", "status_code", resp.StatusCode)
 
-	var parsedJson []Event
+	var parsedJSON []Event
 	jsonResponse, err := io.ReadAll(resp.Body)
 	if err != nil {
 		log.Error("Error reading response body for CTFs:", "err", err)
@@ -141,7 +145,7 @@ func GetCTFs() ([]Event, error) {
 
 	if resp.StatusCode == 200 {
 		log.Debug("Unmarshalling CTFs JSON response")
-		err = json.Unmarshal(jsonResponse, &parsedJson)
+		err = json.Unmarshal(jsonResponse, &parsedJSON)
 		if err != nil {
 			log.Error("Error unmarshalling CTFs JSON:", "err", err)
 			return nil, err
@@ -150,8 +154,8 @@ func GetCTFs() ([]Event, error) {
 		log.Error("Non-200 status code received for CTFs", "status_code", resp.StatusCode)
 	}
 
-	log.Debug("Returning parsed CTFs", "count", len(parsedJson))
-	return parsedJson, nil
+	log.Debug("Returning parsed CTFs", "count", len(parsedJSON))
+	return parsedJSON, nil
 }
 
 type ResultScore struct {
@@ -163,7 +167,7 @@ type ResultScore struct {
 
 func GetResultsInfo(ctftimeID int64, year int, teamID int64) (*database.ReportModel, error) {
 	log.Debug("Getting results for event with ID", "ctftime_id", ctftimeID)
-	url := fmt.Sprintf("%s/results/%d/", BASE_URL, year)
+	url := fmt.Sprintf("%s/results/%d/", BaseURL, year)
 	log.Debug("Fetching CTF results from URL:", "url", url)
 
 	client := &http.Client{}
@@ -181,7 +185,7 @@ func GetResultsInfo(ctftimeID int64, year int, teamID int64) (*database.ReportMo
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		log.Error("Failed to retrieve CTF results information. Status code:", "status", resp.StatusCode)
+		log.Error("failed to retrieve CTF results information. Status code:", "status", resp.StatusCode)
 		return nil, fmt.Errorf("status %d", resp.StatusCode)
 	}
 
@@ -197,7 +201,7 @@ func GetResultsInfo(ctftimeID int64, year int, teamID int64) (*database.ReportMo
 	log.Debug("Looking for event ID in results", "ctftime_id", ctftimeID)
 	log.Debug("Looking for team ID in results", "team_id", teamID)
 
-	eventKey := fmt.Sprintf("%d", ctftimeID)
+	eventKey := strconv.FormatInt(ctftimeID, 10)
 	eventData, ok := responseData[eventKey]
 	if !ok {
 		log.Error("Event ID not found in results response", "ctftime_id", ctftimeID)
