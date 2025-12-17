@@ -27,6 +27,7 @@ CREATE TABLE IF NOT EXISTS reports (
   place INTEGER NOT NULL,
   solves INTEGER NOT NULL,
   score INTEGER NOT NULL,
+  last_update INTEGER NOT NULL,
   FOREIGN KEY (ctf_id) REFERENCES ctfs (id)
 );
 

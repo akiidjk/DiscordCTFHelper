@@ -92,7 +92,7 @@ func FlagHandler(b *ctfbot.Bot) handler.CommandHandler {
 
 		content += fmt.Sprintf("🎉\n> `%s`", flag)
 
-		msg, err := client.Rest().CreateMessage(e.Channel().ID(), discord.MessageCreate{
+		msg, err := client.Rest.CreateMessage(e.Channel().ID(), discord.MessageCreate{
 			Content: content,
 		})
 		if err != nil {
@@ -100,7 +100,7 @@ func FlagHandler(b *ctfbot.Bot) handler.CommandHandler {
 			return err
 		}
 
-		err = client.Rest().AddReaction(e.Channel().ID(), msg.ID, "🔥")
+		err = client.Rest.AddReaction(e.Channel().ID(), msg.ID, "🔥")
 		if err != nil {
 			log.Error("Failed to add reaction to flag message", "error", err)
 			return err

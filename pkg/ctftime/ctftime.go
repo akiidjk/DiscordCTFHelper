@@ -9,6 +9,9 @@ import (
 	"math/rand"
 	"net/http"
 	"strconv"
+	"strings"
+
+	"ctfhelper/pkg/database"
 
 	_ "image/gif"
 	_ "image/jpeg"
@@ -113,8 +116,13 @@ func GetCTFInfo(ctftime_id int) (Event, error) {
 
 func GetCTFs() ([]Event, error) {
 	url := BASE_URL + "/events/"
+	log.Debug("Fetching CTFs from URL:", "url", url)
 	client := &http.Client{}
 	req, err := createRequest(url)
+	if err != nil {
+		log.Error("Error creating request for CTFs:", "err", err)
+		return nil, err
+	}
 
 	resp, err := client.Do(req)
 	if err != nil {
@@ -123,16 +131,97 @@ func GetCTFs() ([]Event, error) {
 	}
 	defer resp.Body.Close()
 
+	log.Debug("Received response for CTFs", "status_code", resp.StatusCode)
+
 	var parsedJson []Event
-	var jsonResponse []byte
-	_, err = resp.Body.Read(jsonResponse)
+	jsonResponse, err := io.ReadAll(resp.Body)
 	if err != nil {
+		log.Error("Error reading response body for CTFs:", "err", err)
 		return nil, err
 	}
 
 	if resp.StatusCode == 200 {
-		json.Unmarshal(jsonResponse, &parsedJson)
+		log.Debug("Unmarshalling CTFs JSON response")
+		err = json.Unmarshal(jsonResponse, &parsedJson)
+		if err != nil {
+			log.Error("Error unmarshalling CTFs JSON:", "err", err)
+			return nil, err
+		}
+	} else {
+		log.Error("Non-200 status code received for CTFs", "status_code", resp.StatusCode)
 	}
 
+	log.Debug("Returning parsed CTFs", "count", len(parsedJson))
 	return parsedJson, nil
+}
+
+type ResultScore struct {
+	TeamID int64  `json:"team_id"`
+	Place  int    `json:"place"`
+	Points string `json:"points"`
+	Solves int    `json:"solves"`
+}
+
+func GetResultsInfo(ctftimeID int64, year int, teamID int64) (*database.ReportModel, error) {
+	log.Debug("Getting results for event with ID", "ctftime_id", ctftimeID)
+	url := fmt.Sprintf("%s/results/%d/", BASE_URL, year)
+	log.Debug("Fetching CTF results from URL:", "url", url)
+
+	client := &http.Client{}
+	req, err := createRequest(url)
+	if err != nil {
+		log.Error("Error creating request for results:", "err", err)
+		return nil, err
+	}
+
+	resp, err := client.Do(req)
+	if err != nil {
+		log.Error("Error sending request for results:", "err", err)
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		log.Error("Failed to retrieve CTF results information. Status code:", "status", resp.StatusCode)
+		return nil, fmt.Errorf("status %d", resp.StatusCode)
+	}
+
+	var responseData map[string]struct {
+		Scores []ResultScore `json:"scores"`
+	}
+	err = json.NewDecoder(resp.Body).Decode(&responseData)
+	if err != nil {
+		log.Error("Error decoding results response:", "err", err)
+		return nil, err
+	}
+
+	log.Debug("Looking for event ID in results", "ctftime_id", ctftimeID)
+	log.Debug("Looking for team ID in results", "team_id", teamID)
+
+	eventKey := fmt.Sprintf("%d", ctftimeID)
+	eventData, ok := responseData[eventKey]
+	if !ok {
+		log.Error("Event ID not found in results response", "ctftime_id", ctftimeID)
+		return nil, nil
+	}
+
+	for _, result := range eventData.Scores {
+		if result.TeamID == teamID {
+			scoreFloat, err := strconv.ParseFloat(strings.TrimSpace(result.Points), 64)
+			if err != nil {
+				log.Error("Error parsing score to float:", "err", err)
+				return nil, err
+			}
+			scoreInt := int(scoreFloat)
+			report := &database.ReportModel{
+				Place:  result.Place,
+				Score:  scoreInt,
+				Solves: result.Solves,
+			}
+			return report, nil
+		}
+	}
+
+	log.Error("Team ID not found in results", "team_id", teamID)
+	return nil, nil
 }

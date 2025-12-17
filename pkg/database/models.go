@@ -1,6 +1,10 @@
 package database
 
-import "github.com/disgoorg/snowflake/v2"
+import (
+	"time"
+
+	"github.com/disgoorg/snowflake/v2"
+)
 
 // ServerModel represents a Discord server configuration
 type ServerModel struct {
@@ -28,11 +32,12 @@ type CTFModel struct {
 
 // ReportModel represents a CTF report with results
 type ReportModel struct {
-	ID     int64
-	CTFID  int64
-	Place  int
-	Solves int
-	Score  int
+	ID         int64
+	CTFID      int64
+	LastUpdate time.Time
+	Place      int
+	Solves     int
+	Score      int
 }
 
 // CredsModel represents credentials for a CTF

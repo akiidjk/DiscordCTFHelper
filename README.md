@@ -97,9 +97,10 @@ This project is licensed under the Apache License. See the [LICENSE](LICENSE.md)
 - [x] Remove command
 - [x] Creds command (command for store and show the creds of a ctf)
 - [x] Send link to ctf message when channel is created
-- [ ] `/chall` command to add challenges
-- [ ] `/vote` to vote next ctf
-- [ ] Migration to discordgo or disgo (not urgent)
+- [x] `/chall` command to add challenges
+- [x] Migration to discordgo or disgo (not urgent)
+- [-] `/vote` to vote next ctf (incomplete)
+
 
 ## Contact
 

@@ -52,14 +52,14 @@ func (db *Database) DeleteCreds(ctfID int64) bool {
 }
 
 // GetCreds retrieves credentials from the database for a specific CTF.
-func (db *Database) GetCreds(ctfID int64) ([]CredsModel, error) {
+func (db *Database) GetCreds(ctfID int64) (CredsModel, error) {
 	rows, err := db.connection.Query(
-		`SELECT id, username, password, personal, ctf_id FROM creds WHERE ctf_id = ?`,
+		`SELECT id, username, password, personal, ctf_id FROM creds WHERE ctf_id = ? LIMIT 1`,
 		ctfID,
 	)
 	if err != nil {
 		log.Error("Failed to query credentials", "err", err)
-		return nil, err
+		return CredsModel{}, err
 	}
 	defer rows.Close()
 
@@ -76,8 +76,13 @@ func (db *Database) GetCreds(ctfID int64) ([]CredsModel, error) {
 
 	if err = rows.Err(); err != nil {
 		log.Error("Error iterating credentials rows", "err", err)
-		return nil, err
+		return CredsModel{}, err
 	}
 
-	return creds, nil
+	if len(creds) == 0 {
+		return CredsModel{}, nil
+	}
+
+	log.Debug("Fetched credentials", "creds", creds)
+	return creds[0], nil
 }

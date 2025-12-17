@@ -22,12 +22,12 @@ func (db *Database) AddCTF(ctf CTFModel) error {
 }
 
 // GetCTFByName retrieves a CTF from the database by name and server ID.
-func (db *Database) GetCTFByName(name string, serverID int64) (*CTFModel, error) {
+func (db *Database) GetCTFByName(name string, serverID snowflake.ID) (*CTFModel, error) {
 	var ctf CTFModel
 	err := db.connection.QueryRow(
 		`SELECT id, server_id, name, description, text_channel_id, event_id, role_id, msg_id, ctftime_id
-		FROM ctfs WHERE name = ? AND server_id = ?`,
-		name, serverID,
+		FROM ctfs WHERE name LIKE ? AND server_id = ?`,
+		"%"+name+"%", serverID,
 	).Scan(&ctf.ID, &ctf.ServerID, &ctf.Name, &ctf.Description, &ctf.TextChannelID, &ctf.EventID, &ctf.RoleID, &ctf.MsgID, &ctf.CTFTimeID)
 
 	if err == sql.ErrNoRows {
@@ -44,16 +44,38 @@ func (db *Database) GetCTFByName(name string, serverID int64) (*CTFModel, error)
 }
 
 // GetCTFByID retrieves a CTF from the database by its ID.
-func (db *Database) GetCTFByID(ctfID int64) (*CTFModel, error) {
+func (db *Database) GetCTFByID(id int64) (*CTFModel, error) {
 	var ctf CTFModel
 	err := db.connection.QueryRow(
 		`SELECT id, server_id, name, description, text_channel_id, event_id, role_id, msg_id, ctftime_id
 		FROM ctfs WHERE id = ?`,
-		ctfID,
+		id,
 	).Scan(&ctf.ID, &ctf.ServerID, &ctf.Name, &ctf.Description, &ctf.TextChannelID, &ctf.EventID, &ctf.RoleID, &ctf.MsgID, &ctf.CTFTimeID)
 
 	if err == sql.ErrNoRows {
-		log.Debug("CTF not found", "ctf_id", ctfID)
+		log.Debug("CTF not found", "ctf_id", id)
+		return nil, nil
+	}
+	if err != nil {
+		log.Error("Failed to query CTF by ID", "err", err)
+		return nil, err
+	}
+
+	log.Debug("CTF found", "id", ctf.ID, "name", ctf.Name)
+	return &ctf, nil
+}
+
+// GetCTFByID retrieves a CTF from the database by its ID.
+func (db *Database) GetCTFByCTFTimeID(ctftime_id int64) (*CTFModel, error) {
+	var ctf CTFModel
+	err := db.connection.QueryRow(
+		`SELECT id, server_id, name, description, text_channel_id, event_id, role_id, msg_id, ctftime_id
+		FROM ctfs WHERE ctftime_id = ?`,
+		ctftime_id,
+	).Scan(&ctf.ID, &ctf.ServerID, &ctf.Name, &ctf.Description, &ctf.TextChannelID, &ctf.EventID, &ctf.RoleID, &ctf.MsgID, &ctf.CTFTimeID)
+
+	if err == sql.ErrNoRows {
+		log.Debug("CTF not found", "ctftime_id", ctftime_id)
 		return nil, nil
 	}
 	if err != nil {
@@ -76,7 +98,7 @@ func (db *Database) DeleteCTF(ctfID int64) bool {
 }
 
 // GetCTFByMessageID retrieves a CTF from the database by message ID and server ID.
-func (db *Database) GetCTFByMessageID(messageID, serverID int64) (*CTFModel, error) {
+func (db *Database) GetCTFByMessageID(messageID, serverID snowflake.ID) (*CTFModel, error) {
 	var ctf CTFModel
 	err := db.connection.QueryRow(
 		`SELECT id, server_id, name, description, text_channel_id, event_id, role_id, msg_id, ctftime_id
@@ -141,7 +163,7 @@ func (db *Database) IsCTFPresent(name string, serverID snowflake.ID) (bool, erro
 }
 
 // GetCTFsList retrieves a list of all CTFs for a specific server.
-func (db *Database) GetCTFsList(serverID int64) ([]CTFModel, error) {
+func (db *Database) GetCTFsList(serverID snowflake.ID) ([]CTFModel, error) {
 	rows, err := db.connection.Query(
 		`SELECT id, server_id, name, description, text_channel_id, event_id, role_id, msg_id, ctftime_id
 		FROM ctfs WHERE server_id = ?`,

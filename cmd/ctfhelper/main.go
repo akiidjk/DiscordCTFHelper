@@ -35,6 +35,7 @@ func init() {
 
 func main() {
 	shouldSyncCommands := flag.Bool("sync-commands", false, "Whether to sync commands to discord")
+	shouldCleanCommands := flag.Bool("clean-commands", false, "Whether to clean commands from discord")
 	flag.Parse()
 
 	cfg, err := pkg.LoadConfig()
@@ -67,7 +68,7 @@ func main() {
 	h.Command("/chall", commands.ChallHandler(b))
 	h.Command("/vote", commands.VoteHandler(b))
 
-	if err = b.SetupBot(h, bot.NewListenerFunc(b.OnReady), handlers.MessageHandler(b)); err != nil {
+	if err = b.SetupBot(shouldCleanCommands, h, bot.NewListenerFunc(b.OnReady), handlers.MessageHandler(b)); err != nil {
 		log.Error("Failed to setup bot", "err", err)
 		os.Exit(-1)
 	}
@@ -78,12 +79,12 @@ func main() {
 		b.Client.Close(ctx)
 	}()
 
-	// if *shouldSyncCommands {
-	// 	log.Info("Syncing commands", "guild_ids", cfg.Bot.DevGuilds)
-	// 	if err = handler.SyncCommands(b.Client, commands.Commands, cfg.Bot.DevGuilds); err != nil {
-	// 		log.Error("Failed to sync commands", "err", err)
-	// 	}
-	// }
+	if *shouldSyncCommands {
+		log.Info("Syncing commands", "guild_ids", cfg.Bot.DevGuilds)
+		if err = handler.SyncCommands(&b.Client, commands.Commands, cfg.Bot.DevGuilds); err != nil {
+			log.Error("Failed to sync commands", "err", err)
+		}
+	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
