@@ -56,3 +56,6 @@ generated_*.go
 
 # Samples
 samples/
+
+# db
+*.db
