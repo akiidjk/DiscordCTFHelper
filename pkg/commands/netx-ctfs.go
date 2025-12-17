@@ -1,11 +1,11 @@
 package commands
 
 import (
+	"ctfbot"
+	"ctftime"
 	"fmt"
 	"strings"
 	"time"
-
-	ctfbot "ctfhelper/pkg/bot"
 
 	"github.com/disgoorg/disgo/discord"
 	"github.com/disgoorg/disgo/handler"

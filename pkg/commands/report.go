@@ -1,15 +1,13 @@
 package commands
 
 import (
+	"ctfbot"
+	"ctftime"
+	"discordutils"
 	"fmt"
 	"strconv"
 	"strings"
 	"time"
-
-	ctfbot "ctfhelper/pkg/bot"
-	"ctfhelper/pkg/ctftime"
-
-	utils "ctfhelper/pkg/discord"
 
 	"github.com/charmbracelet/log"
 	"github.com/disgoorg/disgo/discord"
@@ -51,7 +49,7 @@ func ReportHandler(b *ctfbot.Bot) handler.CommandHandler {
 			return err
 		}
 
-		if err := utils.CheckPermission(b, e); err != nil {
+		if err := discordutils.CheckPermission(b, e); err != nil {
 			return err
 		}
 
@@ -134,7 +132,7 @@ func ReportHandler(b *ctfbot.Bot) handler.CommandHandler {
 
 		embed := discord.Embed{
 			Title: fmt.Sprintf("Report for %s", ctf.Name),
-			Color: utils.ColorBlurple,
+			Color: discordutils.ColorBlurple,
 			Fields: []discord.EmbedField{
 				{
 					Name: "Place",

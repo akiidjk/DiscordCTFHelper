@@ -1,8 +1,9 @@
 package database
 
 import (
-	"database/sql"
 	"time"
+
+	"database/sql"
 
 	"github.com/charmbracelet/log"
 )

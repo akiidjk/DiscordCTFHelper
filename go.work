@@ -8,4 +8,17 @@ use (
 	./pkg/handlers
 	./pkg/commands
 	./pkg/config
+	./cmd/ctfhelper
+	.
+)
+
+replace (
+	./pkg/bot => ./pkg/bot
+	./pkg/database => ./pkg/database
+	./pkg/ctftime => ./pkg/ctftime
+	./pkg/discord => ./pkg/discord
+	./pkg/handlers => ./pkg/handlers
+	./pkg/commands => ./pkg/commands
+	./pkg/config => ./pkg/config
+	./cmd/ctfhelper => ./cmd/ctfhelper
 )

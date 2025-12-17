@@ -1,8 +1,8 @@
 package commands
 
 import (
-	ctfbot "ctfhelper/pkg/bot"
-	utils "ctfhelper/pkg/discord"
+	"ctfbot"
+	"discordutils"
 
 	"github.com/charmbracelet/log"
 	"github.com/disgoorg/disgo/discord"
@@ -55,7 +55,7 @@ func DeleteFlagHandler(b *ctfbot.Bot) handler.CommandHandler {
 		}
 
 		// Permission check placeholder (implement as needed)
-		err = utils.CheckPermission(b, e)
+		err = discordutils.CheckPermission(b, e)
 		if err != nil {
 			_, _ = e.CreateFollowupMessage(discord.MessageCreate{
 				Content: "You do not have permission to delete flags. ❌",

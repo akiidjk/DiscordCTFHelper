@@ -1,10 +1,9 @@
 package commands
 
 import (
+	"ctfbot"
+	"database"
 	"fmt"
-
-	ctfbot "ctfhelper/pkg/bot"
-	"ctfhelper/pkg/database"
 
 	"github.com/charmbracelet/log"
 	"github.com/disgoorg/disgo/discord"

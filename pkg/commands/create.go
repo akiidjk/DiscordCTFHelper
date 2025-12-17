@@ -1,9 +1,9 @@
 package commands
 
 import (
-	ctfbot "ctfhelper/pkg/bot"
-	"ctfhelper/pkg/database"
+	"ctfbot"
 	"ctftime"
+	"database"
 	"discordutils"
 	"errors"
 	"fmt"

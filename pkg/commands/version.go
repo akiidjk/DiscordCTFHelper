@@ -1,9 +1,8 @@
 package commands
 
 import (
+	"ctfbot"
 	"fmt"
-
-	ctfbot "ctfhelper/pkg/bot"
 
 	"github.com/disgoorg/disgo/discord"
 	"github.com/disgoorg/disgo/handler"

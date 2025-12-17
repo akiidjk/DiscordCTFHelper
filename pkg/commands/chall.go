@@ -1,7 +1,7 @@
 package commands
 
 import (
-	ctfbot "ctfhelper/pkg/bot"
+	"ctfbot"
 	"discordutils"
 
 	"github.com/charmbracelet/log"

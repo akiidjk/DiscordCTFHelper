@@ -1,20 +1,19 @@
 package main
 
 import (
+	"commands"
+	"config"
 	"context"
+	"ctfbot"
+	"database"
 	"flag"
+	"handlers"
 	"os"
 	"os/signal"
 	"syscall"
 	"time"
 
 	"github.com/charmbracelet/log"
-
-	"ctfhelper/pkg"
-	ctfbot "ctfhelper/pkg/bot"
-	"ctfhelper/pkg/commands"
-	"ctfhelper/pkg/database"
-	"ctfhelper/pkg/handlers"
 
 	"github.com/disgoorg/disgo/bot"
 	"github.com/disgoorg/disgo/handler"
@@ -38,7 +37,7 @@ func main() {
 	shouldCleanCommands := flag.Bool("clean-commands", false, "Whether to clean commands from discord")
 	flag.Parse()
 
-	cfg, err := pkg.LoadConfig()
+	cfg, err := config.LoadConfig()
 	if err != nil {
 		log.Error("Failed to read config", "err", err)
 		os.Exit(-1)
@@ -100,7 +99,7 @@ func main() {
 	log.Info("Shutting down bot...")
 }
 
-func setupLogger(cfg pkg.LogConfig) {
+func setupLogger(cfg config.LogConfig) {
 	opts := log.Options{
 		Level:           cfg.Level,
 		ReportCaller:    cfg.AddSource,
