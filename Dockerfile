@@ -5,16 +5,21 @@ WORKDIR /app
 COPY go.mod .
 COPY go.sum .
 
+RUN apk add --no-cache gcc musl-dev
+
 RUN go mod download
 
 COPY . .
 
-ENV CGO_ENABLED=0
+ENV CGO_ENABLED=1
 
-RUN go build -o ctfhelper ./cmd/ctfhelper
+RUN GOOS=linux GOARCH=amd64 go build -o ctfhelper -ldflags="-s -w" ./cmd/ctfhelper
 
-FROM gcr.io/distroless/static-debian12
+FROM alpine:3.12
 
-COPY --from=builder /app/ctfbotd /ctfbotd
+RUN apk add --no-cache ca-certificates libc6-compat
+
+COPY --from=builder /app/ctfhelper /ctfhelper
+COPY --from=builder /app/.env /.env
 
 ENTRYPOINT ["/ctfhelper"]
