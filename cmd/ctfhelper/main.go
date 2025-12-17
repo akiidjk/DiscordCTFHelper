@@ -5,9 +5,7 @@ import (
 	"config"
 	"context"
 	"ctfbot"
-	"database"
 	"flag"
-	"handlers"
 	"os"
 	"os/signal"
 	"syscall"
@@ -18,11 +16,6 @@ import (
 	"github.com/disgoorg/disgo/bot"
 	"github.com/disgoorg/disgo/handler"
 	dotenv "github.com/dotenv-org/godotenvvault"
-)
-
-var (
-	Version = "dev"
-	Commit  = "2.0.0"
 )
 
 func init() {
@@ -39,36 +32,34 @@ func main() {
 
 	cfg, err := config.LoadConfig()
 	if err != nil {
-		log.Error("Failed to read config", "err", err)
+		log.Error("failed to read config", "err", err)
 		os.Exit(-1)
 	}
 
 	setupLogger(cfg.Log)
-	log.Info("Starting bot-template...", "version", Version, "commit", Commit)
+	log.Info("Starting bot-template...", "version", config.Version, "commit", config.Commit)
 	log.Info("Syncing commands", "sync", *shouldSyncCommands)
 
-	b := ctfbot.New(*cfg, Version, Commit)
-	b.Database = database.Setup()
-	defer b.Database.Close()
+	b := ctfbot.New(*cfg, config.Version, config.Commit)
 
 	h := handler.New()
 
 	// Command registrations
-	h.Command("/version", commands.VersionHandler(b))
-	h.Command("/create", commands.CreateHandler(b))
-	h.Command("/remove", commands.RemoveHandler(b))
-	h.Command("/flag", commands.FlagHandler(b))
-	h.Command("/delete-flag", commands.DeleteFlagHandler(b))
-	h.Command("/report", commands.ReportHandler(b))
-	h.Command("/creds", commands.CredsHandler(b))
-	h.Command("/delete-creds", commands.DeleteCredsHandler(b))
-	h.Command("/next-ctfs", commands.NextCTFsHandler(b))
-	h.Command("/init", commands.InitHandler(b))
-	h.Command("/chall", commands.ChallHandler(b))
-	h.Command("/vote", commands.VoteHandler(b))
+	h.Command("/version", commands.VersionHandler())
+	h.Command("/create", commands.CreateHandler())
+	h.Command("/remove", commands.RemoveHandler())
+	h.Command("/flag", commands.FlagHandler())
+	h.Command("/delete-flag", commands.DeleteFlagHandler())
+	h.Command("/report", commands.ReportHandler())
+	h.Command("/creds", commands.CredsHandler())
+	h.Command("/delete-creds", commands.DeleteCredsHandler())
+	h.Command("/next-ctfs", commands.NextCTFsHandler())
+	h.Command("/init", commands.InitHandler())
+	h.Command("/chall", commands.ChallHandler())
+	h.Command("/vote", commands.VoteHandler())
 
-	if err = b.SetupBot(shouldCleanCommands, h, bot.NewListenerFunc(b.OnReady), handlers.MessageHandler(b)); err != nil {
-		log.Error("Failed to setup bot", "err", err)
+	if err = b.SetupBot(shouldCleanCommands, h, bot.NewListenerFunc(b.OnReady)); err != nil {
+		log.Error("failed to setup bot", "err", err)
 		os.Exit(-1)
 	}
 
@@ -81,15 +72,15 @@ func main() {
 	if *shouldSyncCommands {
 		log.Info("Syncing commands", "guild_ids", cfg.Bot.DevGuilds)
 		if err = handler.SyncCommands(&b.Client, commands.Commands, cfg.Bot.DevGuilds); err != nil {
-			log.Error("Failed to sync commands", "err", err)
+			log.Error("failed to sync commands", "err", err)
 		}
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 	if err = b.Client.OpenGateway(ctx); err != nil {
-		log.Error("Failed to open gateway", "err", err)
-		os.Exit(-1)
+		log.Error("failed to open gateway", "err", err)
+		return
 	}
 
 	log.Info("Bot is running. Press CTRL-C to exit.")
