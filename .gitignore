@@ -23,7 +23,6 @@ coverage.out
 # vendor/
 
 # Go workspace files
-go.work
 go.work.sum
 
 # IDEs and editors
