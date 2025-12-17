@@ -1,0 +1,113 @@
+package main
+
+import (
+	"commands"
+	"config"
+	"context"
+	"ctfbot"
+	"flag"
+	"os"
+	"os/signal"
+	"syscall"
+	"time"
+
+	"github.com/charmbracelet/log"
+
+	"github.com/disgoorg/disgo/bot"
+	"github.com/disgoorg/disgo/handler"
+	dotenv "github.com/dotenv-org/godotenvvault"
+)
+
+func init() {
+	err := dotenv.Load()
+	if err != nil {
+		log.Fatal("Error loading .env file")
+	}
+}
+
+func main() {
+	shouldSyncCommands := flag.Bool("sync-commands", false, "Whether to sync commands to discord")
+	shouldCleanCommands := flag.Bool("clean-commands", false, "Whether to clean commands from discord")
+	flag.Parse()
+
+	cfg, err := config.LoadConfig()
+	if err != nil {
+		log.Error("failed to read config", "err", err)
+		os.Exit(-1)
+	}
+
+	setupLogger(cfg.Log)
+	log.Info("Starting bot-template...", "version", config.Version, "commit", config.Commit)
+	log.Info("Syncing commands", "sync", *shouldSyncCommands)
+
+	b := ctfbot.New(*cfg, config.Version, config.Commit)
+
+	h := handler.New()
+
+	// Command registrations
+	h.Command("/version", commands.VersionHandler())
+	h.Command("/create", commands.CreateHandler())
+	h.Command("/remove", commands.RemoveHandler())
+	h.Command("/flag", commands.FlagHandler())
+	h.Command("/delete-flag", commands.DeleteFlagHandler())
+	h.Command("/report", commands.ReportHandler())
+	h.Command("/creds", commands.CredsHandler())
+	h.Command("/delete-creds", commands.DeleteCredsHandler())
+	h.Command("/next-ctfs", commands.NextCTFsHandler())
+	h.Command("/init", commands.InitHandler())
+	h.Command("/chall", commands.ChallHandler())
+	h.Command("/vote", commands.VoteHandler())
+
+	if err = b.SetupBot(shouldCleanCommands, h, bot.NewListenerFunc(b.OnReady)); err != nil {
+		log.Error("failed to setup bot", "err", err)
+		os.Exit(-1)
+	}
+
+	defer func() {
+		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+		defer cancel()
+		b.Client.Close(ctx)
+	}()
+
+	if *shouldSyncCommands {
+		log.Info("Syncing commands", "guild_ids", cfg.Bot.DevGuilds)
+		if err = handler.SyncCommands(&b.Client, commands.Commands, cfg.Bot.DevGuilds); err != nil {
+			log.Error("failed to sync commands", "err", err)
+		}
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	if err = b.Client.OpenGateway(ctx); err != nil {
+		log.Error("failed to open gateway", "err", err)
+		return
+	}
+
+	log.Info("Bot is running. Press CTRL-C to exit.")
+	s := make(chan os.Signal, 1)
+	signal.Notify(s, syscall.SIGINT, syscall.SIGTERM)
+	<-s
+	log.Info("Shutting down bot...")
+}
+
+func setupLogger(cfg config.LogConfig) {
+	opts := log.Options{
+		Level:           cfg.Level,
+		ReportCaller:    cfg.AddSource,
+		ReportTimestamp: true,
+		TimeFormat:      time.Kitchen,
+	}
+
+	logger := log.NewWithOptions(os.Stdout, opts)
+
+	switch cfg.Format {
+	case "json":
+		logger.SetFormatter(log.JSONFormatter)
+	case "text":
+		logger.SetFormatter(log.TextFormatter)
+	default:
+		log.Error("Unknown log format", "format", cfg.Format)
+	}
+
+	log.SetDefault(logger)
+}

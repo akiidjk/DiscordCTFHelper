@@ -1,5 +1,5 @@
 # DiscordCTFHelper
->
+
 > A powerful and customizable bot to manage and organize CTF competitions on Discord.
 
 ## Table of Contents
@@ -12,14 +12,13 @@
     - [Prerequisites](#prerequisites)
     - [Steps](#steps)
   - [Usage](#usage)
-  - [RAD](#rad)
   - [License](#license)
   - [To add](#to-add)
   - [Contact](#contact)
 
 ## About
 
-**DiscordCTFHelper** is a Python bot built with `discord.py` designed to streamline CTF (Capture The Flag) management on Discord servers. The bot integrates with CTFTime and provides essential features for tracking events, managing participants, and sharing updates.
+**DiscordCTFHelper** is a Go bot built with `disgo` designed to streamline CTF (Capture The Flag) management on Discord servers. The bot integrates with CTFTime and provides essential features for tracking events, managing participants, and sharing updates.
 
 ## Features
 
@@ -33,8 +32,7 @@
 
 ### Prerequisites
 
-- Python 3.12
-- `discord.py` (latest version)
+- Go 1.25.5 or later
 - A Discord bot token (obtainable via the [Discord Developer Portal](https://discord.com/developers/applications))
 
 ### Steps
@@ -46,48 +44,43 @@
    cd DiscordCTFHelper
    ```
 
-2. Create a virtual environment:
+2. Install dependencies:
 
    ```bash
-   python3.12 -m venv venv
-   source venv/bin/activate  # On Windows: venv\Scripts\activate
+   go mod download
    ```
 
-3. Install dependencies:
-
-   ```bash
-   pip install -r requirements.txt
-   ```
-
-4. Set up your `.env` file:
+3. Set up your `.env` file:
    Create a `.env` file in the root directory and include the following variables:
 
    ```env
    TOKEN=<discord_token>
+   LOG_LEVEL=info
+   LOG_FORMAT=text
+   LOG_SOURCE=false
    ```
 
-5. Run the bot:
+4. Run the bot:
 
    ```bash
-   python bot.py
+   go run cmd/ctfhelper/main.go
    ```
+
+   Optional flags (dev scope):
+   - `--sync-commands`: Sync slash commands to Discord.
+   - `--clean-commands`: Clean existing commands from Discord.
 
 ## Usage
 
 - Invite the bot to your server using the generated OAuth2 link from the [Discord Developer Portal](https://discord.com/developers/applications).
-- A user with admin role can run the command /init for the bot setup
-- Create a ctf with /create_ctf
-
-## RAD (outdated)
-
-- [Rad EN](/docs/RAD_en.pdf)
-- [Rad IT](/docs/RAD_it.pdf)
+- A user with admin role can run the command `/init` for the bot setup.
+- Create a CTF with `/create`.
 
 ## License
 
 This project is licensed under the Apache License. See the [LICENSE](LICENSE.md) file for details.
 
-## To add
+## Roadmap
 
 - [x] Add final scraping for team stats
 - [x] Add overall report generation
@@ -97,9 +90,9 @@ This project is licensed under the Apache License. See the [LICENSE](LICENSE.md)
 - [x] Remove command
 - [x] Creds command (command for store and show the creds of a ctf)
 - [x] Send link to ctf message when channel is created
-- [ ] `/chall` command to add challenges
-- [ ] `/vote` to vote next ctf
-- [ ] Migration to discordgo or disgo (not urgent)
+- [x] `/chall` command to add challenges
+- [x] Migration to discordgo or disgo (not urgent)
+- [x] `/vote` to vote next ctf (incomplete)
 
 ## Contact
 

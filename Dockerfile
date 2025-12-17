@@ -1,35 +1,25 @@
-FROM python:3.12-alpine AS builder
+FROM golang:1.25.5-alpine AS builder
 
 WORKDIR /app
 
-RUN apk add --no-cache \
-    gcc \
-    musl-dev \
-    libffi-dev
+COPY go.mod .
+COPY go.sum .
 
-COPY requirements.txt ./
+RUN apk add --no-cache gcc musl-dev
 
-RUN pip install --no-cache-dir --upgrade pip && \
-    pip install --no-cache-dir -r requirements.txt
-
-FROM python:3.12-alpine
-
-WORKDIR /app
-
-RUN adduser -D -s /bin/sh botuser && \
-    mkdir -p /app/logs /app/database && \
-    chown -R botuser:botuser /app
-
-COPY --from=builder /usr/local/lib/python3.12/site-packages /usr/local/lib/python3.12/site-packages
-COPY --from=builder /usr/local/bin /usr/local/bin
+RUN go mod download
 
 COPY . .
 
-# Impostare i permessi definitivi per i file copiati
-RUN chown -R botuser:botuser /app
+ENV CGO_ENABLED=1
 
-VOLUME ["/app/database"]
+RUN GOOS=linux GOARCH=amd64 go build -o ctfhelper -ldflags="-s -w" ./cmd/ctfhelper
 
-USER botuser
+FROM alpine:3.12
 
-CMD ["python3", "bot.py", "INFO"]
+RUN apk add --no-cache ca-certificates libc6-compat
+
+COPY --from=builder /app/ctfhelper /ctfhelper
+COPY --from=builder /app/.env /.env
+
+ENTRYPOINT ["/ctfhelper"]
