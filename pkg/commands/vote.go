@@ -2,7 +2,6 @@ package commands
 
 import (
 	"ctftime"
-	"fmt"
 	"time"
 
 	"github.com/charmbracelet/log"
@@ -15,7 +14,7 @@ var vote = discord.SlashCommandCreate{
 	Description: "Vote the next ctf to participate in",
 	Options: []discord.ApplicationCommandOption{
 		discord.ApplicationCommandOptionInt{
-			Name:        "Duration",
+			Name:        "duration",
 			Description: "Duration of the vote in hours (default 48h)",
 			Required:    false,
 		},
@@ -84,7 +83,7 @@ func VoteHandler() handler.CommandHandler {
 
 						for _, ctf := range ctfsThisWeek {
 							log.Debug("Adding CTF to poll options", "ctf", ctf.Title)
-							text := ctf.Title + fmt.Sprintf("(%d)", ctf.CtfID)
+							text := ctf.Title
 							options = append(options, discord.PollMedia{
 								Text: &text,
 							})

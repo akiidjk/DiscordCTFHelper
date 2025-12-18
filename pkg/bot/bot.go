@@ -61,10 +61,10 @@ func (b *Bot) SetupBot(shouldCleanCommands *bool, listeners ...bot.EventListener
 	}
 
 	if *shouldCleanCommands {
-		var id snowflake.ID = 1345702395178651698
-		if err := b.resetAllCommands(&id); err != nil {
-			log.Error("failed to reset commands", "err", err)
-		}
+		// var id snowflake.ID = 1261228203251339374
+		// if err := b.resetAllCommands(&id); err != nil {
+		// 	log.Error("failed to reset commands", "err", err)
+		// }
 	}
 
 	b.Client = *client
@@ -134,6 +134,11 @@ func (b *Bot) OnReady(_ *events.Ready) {
 	if err := b.Client.SetPresence(ctx, gateway.WithListeningActivity("Setting up your CTF events..."), gateway.WithOnlineStatus(discord.OnlineStatusOnline)); err != nil {
 		log.Error("failed to set presence", "err", err)
 	}
+
+	// var id snowflake.ID = 1261228203251339374
+	// if err := b.resetAllCommands(&id); err != nil {
+	// 	log.Error("failed to reset commands", "err", err)
+	// }
 
 	log.Info("Starting presence status changer...")
 	// Change presence every 10 minutes
