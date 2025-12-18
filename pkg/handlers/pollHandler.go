@@ -3,6 +3,7 @@ package handlers
 import (
 	"commands"
 	"database"
+	"models"
 	"strconv"
 	"strings"
 
@@ -14,7 +15,7 @@ import (
 
 func VotePollHandler() bot.EventListener {
 	return bot.NewListenerFunc(func(e *events.MessageCreate) {
-		db := database.GetInstance()
+		db := database.GetInstance().Connection()
 		if e.Message.Type == discord.MessageTypePollResult && e.Message.Author.ID == *e.Message.ApplicationID {
 			if e.Message.MessageReference == nil || e.Message.MessageReference.MessageID == nil {
 				log.Error("Poll result message does not have a message reference")
@@ -49,14 +50,15 @@ func VotePollHandler() bot.EventListener {
 					log.Error("Error during CTFTime ID conversion", "err", err, "ctf_time_id", ctftimeID)
 					return
 				}
-				serv, err := db.GetServerByID(*e.GuildID)
+				var server models.ServerModel
+				err = server.GetServerByID(db, *e.GuildID)
 				if err != nil {
 					log.Error("Error fetching server configuration", "err", err, "guild_id", *e.GuildID)
 					return
 				}
 
 				// trigger the creation of the CTF
-				commands.CreateCTF(e.GuildID, e.Client(), ctfTimeIDInt, *serv)
+				commands.CreateCTF(e.GuildID, e.Client(), ctfTimeIDInt, server)
 			} else {
 				log.Warn("No answers found in the poll")
 			}

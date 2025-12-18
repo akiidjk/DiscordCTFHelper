@@ -3,6 +3,7 @@ package commands
 import (
 	"database"
 	"fmt"
+	"models"
 
 	"github.com/charmbracelet/log"
 	"github.com/disgoorg/disgo/discord"
@@ -33,7 +34,7 @@ var flag = discord.SlashCommandCreate{
 
 func FlagHandler() handler.CommandHandler {
 	return func(e *handler.CommandEvent) error {
-		db := database.GetInstance()
+		db := database.GetInstance().Connection()
 		client := e.Client()
 
 		if err := e.DeferCreateMessage(true); err != nil {
@@ -55,30 +56,39 @@ func FlagHandler() handler.CommandHandler {
 		mate, okMate := options.OptMember("mate")
 		challengeName, okChallenge := options.OptString("challenge_name")
 
-		ctf, err := db.GetCTFByChannelID(e.Channel().ID(), *e.GuildID())
+		var ctf models.CTFModel
+		err := ctf.GetCTFByChannelID(db, e.Channel().ID(), *e.GuildID())
 		if err != nil {
 			log.Error("failed to fetch ctf by channel id", "error", err)
 			return err
 		}
+		if ctf == (models.CTFModel{}) {
+			_, err := e.CreateFollowupMessage(discord.MessageCreate{
+				Content: "No CTFs are currently active in channel. ❌",
+				Flags:   discord.MessageFlagEphemeral,
+			})
+			return err
+		}
 
-		report, err := db.GetReport(ctf.ID)
+		var report models.ReportModel
+		err = report.GetReportByCTFID(db, ctf.ID)
 		if err != nil {
 			log.Error("failed to fetch report for ctf", "error", err)
 			return err
 		}
 
-		if report == nil {
-			db.AddReport(
-				database.ReportModel{
-					CTFID:  ctf.ID,
-					Place:  -1,
-					Score:  -1,
-					Solves: 1,
-				},
-			)
+		if report == (models.ReportModel{}) {
+			report = models.ReportModel{
+				CTFID:  ctf.ID,
+				Place:  -1,
+				Score:  -1,
+				Solves: 1,
+			}
+			report.AddReport(db)
 		} else {
 			report.Solves += 1
-			db.UpdateReport(ctf.ID, *report)
+			report.CTFID = ctf.ID
+			report.UpdateReport(db)
 		}
 
 		content := fmt.Sprintf("<@&%s> NEW FLAG FOUND BY %s", ctf.RoleID, e.User().Mention())

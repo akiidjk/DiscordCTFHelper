@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"database"
+	"models"
 
 	"github.com/charmbracelet/log"
 	"github.com/disgoorg/disgo/bot"
@@ -10,7 +11,7 @@ import (
 
 func ReactionAddFeedMessageHandler() bot.EventListener {
 	return bot.NewListenerFunc(func(e *events.MessageReactionAdd) {
-		db := database.GetInstance()
+		db := database.GetInstance().Connection()
 
 		// Only handle guild reactions
 		log.Debug("Reaction add event received", "message_id", e.MessageID, "user_id", e.UserID)
@@ -27,12 +28,13 @@ func ReactionAddFeedMessageHandler() bot.EventListener {
 		log.Debug("Reaction add event", "message_id", e.MessageID, "user_id", member.User.ID)
 
 		// Find CTF by message ID and guild ID
-		ctf, err := db.GetCTFByMessageID(e.MessageID, *e.GuildID)
+		var ctf models.CTFModel
+		err := ctf.GetCTFByMessageID(db, e.MessageID, *e.GuildID)
 		if err != nil {
 			log.Error("Error fetching CTF by message ID", "err", err, "message_id", e.MessageID)
 			return
 		}
-		if ctf == nil {
+		if ctf == (models.CTFModel{}) {
 			log.Info("CTF not found for message", "message_id", e.MessageID)
 			return
 		}
@@ -48,7 +50,7 @@ func ReactionAddFeedMessageHandler() bot.EventListener {
 
 func ReactionRemoveFeedMessageHandler() bot.EventListener {
 	return bot.NewListenerFunc(func(e *events.MessageReactionRemove) {
-		db := database.GetInstance()
+		db := database.GetInstance().Connection()
 
 		log.Debug("Reaction remove event received", "message_id", e.MessageID, "user_id", e.UserID)
 		// Only handle guild reactions
@@ -68,12 +70,13 @@ func ReactionRemoveFeedMessageHandler() bot.EventListener {
 		log.Debug("Reaction remove event", "message_id", e.MessageID, "user_id", member.User.ID)
 
 		// Find CTF by message ID and guild ID
-		ctf, err := db.GetCTFByMessageID(e.MessageID, *e.GuildID)
+		var ctf models.CTFModel
+		err = ctf.GetCTFByMessageID(db, e.MessageID, *e.GuildID)
 		if err != nil {
 			log.Error("Error fetching CTF by message ID", "err", err, "message_id", e.MessageID)
 			return
 		}
-		if ctf == nil {
+		if ctf == (models.CTFModel{}) {
 			log.Info("CTF not found for message", "message_id", e.MessageID)
 			return
 		}

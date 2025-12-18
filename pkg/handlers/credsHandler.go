@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"database"
+	"models"
 	"strconv"
 	"strings"
 
@@ -14,7 +15,7 @@ import (
 func CredsModalListener() bot.EventListener {
 	// Handle all the modal submission
 	return bot.NewListenerFunc(func(e *events.ModalSubmitInteractionCreate) {
-		db := database.GetInstance()
+		db := database.GetInstance().Connection()
 		modalID := e.Data.CustomID
 		log.Debug("Modal submitted", "modal_id", modalID, "user_id", e.User().ID)
 		var content, username, password string
@@ -49,12 +50,13 @@ func CredsModalListener() bot.EventListener {
 				break
 			}
 
-			err = db.AddCreds(
-				username,
-				password,
-				personal,
-				int64(ctfID),
-			)
+			creds := models.CredsModel{
+				Username: username,
+				Password: password,
+				Personal: personal,
+				CTFID:    int64(ctfID),
+			}
+			err = creds.AddCreds(db)
 			if err != nil {
 				log.Error("Error adding credentials to database", "err", err, "ctf_id", ctfID)
 				content = "Error saving credentials."

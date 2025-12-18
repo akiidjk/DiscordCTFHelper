@@ -2,6 +2,7 @@ package commands
 
 import (
 	"database"
+	"models"
 
 	"github.com/charmbracelet/log"
 	"github.com/disgoorg/disgo/discord"
@@ -57,7 +58,7 @@ var cinit = discord.SlashCommandCreate{
 func InitHandler() handler.CommandHandler {
 	log.Info("Setting up InitHandler")
 	return func(e *handler.CommandEvent) error {
-		db := database.GetInstance()
+		db := database.GetInstance().Connection()
 		log.Debug("InitHandler called", "guild_id", e.GuildID())
 
 		if err := e.DeferCreateMessage(true); err != nil {
@@ -102,21 +103,22 @@ func InitHandler() handler.CommandHandler {
 			"guild_id", e.GuildID(),
 		)
 
-		server, err := db.GetServerByID(*e.GuildID())
+		var server models.ServerModel
+		err := server.GetServerByID(db, *e.GuildID())
 		if err != nil {
 			log.Error("failed to get server by ID", "guild_id", e.GuildID(), "error", err)
 			return err
 		}
-		if server != nil {
+		if server != (models.ServerModel{}) {
 			log.Info("Server already exists, deleting old config", "guild_id", e.GuildID())
-			if err := db.DeleteServer(*e.GuildID()); err != nil {
+			if err := server.DeleteServer(db); err != nil {
 				log.Error("failed to delete existing server config", "guild_id", e.GuildID(), "error", err)
 				return err
 			}
 		}
 
 		log.Info("Adding new server config", "guild_id", e.GuildID())
-		if err := db.AddServer(database.ServerModel{
+		server = models.ServerModel{
 			ID:                *e.GuildID(),
 			ActiveCategoryID:  categoryActive.ID,
 			ArchiveCategoryID: archiveCategory.ID,
@@ -124,7 +126,8 @@ func InitHandler() handler.CommandHandler {
 			FeedChannelID:     feedChannel.ID,
 			TeamID:            int64(teamID),
 			RoleTeamID:        roleTeam.ID,
-		}); err != nil {
+		}
+		if err := server.AddServer(db); err != nil {
 			log.Error("failed to add server config", "guild_id", e.GuildID(), "error", err)
 			return err
 		}

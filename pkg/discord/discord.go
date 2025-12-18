@@ -5,6 +5,7 @@ import (
 	"database"
 	"errors"
 	"fmt"
+	"models"
 	"time"
 
 	"github.com/charmbracelet/log"
@@ -19,7 +20,7 @@ import (
 const MaxDescLength = 4096
 
 func CheckPermission(e *handler.CommandEvent) error {
-	db := database.GetInstance()
+	db := database.GetInstance().Connection()
 	sendEphemeral := func(content string) error {
 		_, err := e.CreateFollowupMessage(discord.MessageCreate{
 			Content: content,
@@ -38,11 +39,12 @@ func CheckPermission(e *handler.CommandEvent) error {
 		return err
 	}
 
-	server, err := db.GetServerByID(*guildID)
+	var server models.ServerModel
+	err = server.GetServerByID(db, *guildID)
 	if err != nil {
 		return err
 	}
-	if server == nil {
+	if server == (models.ServerModel{}) {
 		return sendEphemeral("Server configuration not found. ❌")
 	}
 

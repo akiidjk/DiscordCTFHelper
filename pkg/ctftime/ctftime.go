@@ -2,12 +2,12 @@ package ctftime
 
 import (
 	"bytes"
-	"database"
 	"encoding/json"
 	"fmt"
 	"image"
 	"io"
 	"math/rand"
+	"models"
 	"net/http"
 	"strconv"
 	"strings"
@@ -143,7 +143,7 @@ func GetCTFs() ([]Event, error) {
 		return nil, err
 	}
 
-	if resp.StatusCode == 200 {
+	if resp.StatusCode == http.StatusOK {
 		log.Debug("Unmarshalling CTFs JSON response")
 		err = json.Unmarshal(jsonResponse, &parsedJSON)
 		if err != nil {
@@ -165,7 +165,7 @@ type ResultScore struct {
 	Solves int    `json:"solves"`
 }
 
-func GetResultsInfo(ctftimeID int64, year int, teamID int64) (*database.ReportModel, error) {
+func GetResultsInfo(ctftimeID int64, year int, teamID int64) (*models.ReportModel, error) {
 	log.Debug("Getting results for event with ID", "ctftime_id", ctftimeID)
 	url := fmt.Sprintf("%s/results/%d/", BaseURL, year)
 	log.Debug("Fetching CTF results from URL:", "url", url)
@@ -216,7 +216,7 @@ func GetResultsInfo(ctftimeID int64, year int, teamID int64) (*database.ReportMo
 				return nil, err
 			}
 			scoreInt := int(scoreFloat)
-			report := &database.ReportModel{
+			report := &models.ReportModel{
 				Place:  result.Place,
 				Score:  scoreInt,
 				Solves: result.Solves,

@@ -5,6 +5,7 @@ import (
 	"config"
 	"context"
 	"ctfbot"
+	"database"
 	"flag"
 	"os"
 	"os/signal"
@@ -35,6 +36,8 @@ func main() {
 		log.Error("failed to read config", "err", err)
 		os.Exit(-1)
 	}
+
+	database.Setup()
 
 	setupLogger(cfg.Log)
 	log.Info("Starting bot-template...", "version", config.Version, "commit", config.Commit)

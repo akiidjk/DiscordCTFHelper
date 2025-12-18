@@ -1,42 +1,32 @@
 package database
 
 import (
-	"database/sql"
-
 	_ "embed"
+	"models"
+	"sync"
+
+	"gorm.io/driver/sqlite"
 
 	"github.com/charmbracelet/log"
-	_ "github.com/mattn/go-sqlite3"
+	"gorm.io/gorm"
 )
 
-//go:embed schema.sql
-var schema string
-
 type Database struct {
-	connection *sql.DB
+	connection *gorm.DB
 }
 
-func (db *Database) Close() {
-	if db.connection != nil {
-		err := db.connection.Close()
-		if err != nil {
-			log.Error("failed to close database", "err", err)
-		}
-	}
-}
-
-func (db *Database) Connection() *sql.DB {
+func (db *Database) Connection() *gorm.DB {
 	return db.connection
 }
 
 func (db *Database) Init() error {
 	var err error
-	db.connection, err = sql.Open("sqlite3", "ctfs.db")
+	db.connection, err = gorm.Open(sqlite.Open("ctfs.db"), &gorm.Config{})
 	if err != nil {
-		log.Fatal(err)
+		log.Fatal("failed to connect database")
 	}
 
-	_, err = db.connection.Exec(schema)
+	err = db.connection.AutoMigrate(&models.ServerModel{}, &models.CTFModel{}, &models.ReportModel{}, &models.CredsModel{})
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -45,20 +35,21 @@ func (db *Database) Init() error {
 }
 
 // Singleton instance
-
-var dbInstance *Database
+var (
+	dbInstance *Database
+	once       sync.Once
+)
 
 func GetInstance() *Database {
 	return dbInstance
 }
 
 func Setup() *Database {
-	if dbInstance == nil {
+	once.Do(func() {
 		dbInstance = &Database{}
-		err := dbInstance.Init()
-		if err != nil {
+		if err := dbInstance.Init(); err != nil {
 			log.Fatal("failed to setup database", "err", err)
 		}
-	}
+	})
 	return dbInstance
 }

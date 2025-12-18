@@ -3,6 +3,7 @@ package commands
 import (
 	"database"
 	"discordutils"
+	"models"
 
 	"github.com/charmbracelet/log"
 	"github.com/disgoorg/disgo/discord"
@@ -34,7 +35,7 @@ var chall = discord.SlashCommandCreate{
 
 func ChallHandler() handler.CommandHandler {
 	return func(e *handler.CommandEvent) error {
-		db := database.GetInstance()
+		db := database.GetInstance().Connection()
 		options := e.SlashCommandInteractionData()
 		name := options.String("name")
 		description, _ := options.OptString("description")
@@ -58,7 +59,9 @@ func ChallHandler() handler.CommandHandler {
 			return err
 		}
 
-		ctf, err := db.GetCTFByChannelID(
+		var ctf models.CTFModel
+		err := ctf.GetCTFByChannelID(
+			db,
 			e.Channel().ID(),
 			*e.GuildID(),
 		)
@@ -66,7 +69,7 @@ func ChallHandler() handler.CommandHandler {
 			log.Error("failed to fetch CTF by channel ID", "error", err)
 			return err
 		}
-		if ctf == nil {
+		if ctf == (models.CTFModel{}) {
 			_, err := e.CreateFollowupMessage(discord.MessageCreate{
 				Content: "No CTF is associated with this channel. ❌",
 				Flags:   discord.MessageFlagEphemeral,

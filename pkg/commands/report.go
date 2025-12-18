@@ -4,6 +4,7 @@ import (
 	"ctftime"
 	"database"
 	"discordutils"
+	"models"
 	"strconv"
 	"strings"
 	"time"
@@ -20,7 +21,7 @@ var report = discord.SlashCommandCreate{
 
 func ReportHandler() handler.CommandHandler {
 	return func(e *handler.CommandEvent) error {
-		db := database.GetInstance()
+		db := database.GetInstance().Connection()
 		if err := e.DeferCreateMessage(true); err != nil {
 			log.Error("failed to defer create message", "error", err)
 			return err
@@ -35,13 +36,14 @@ func ReportHandler() handler.CommandHandler {
 			return err
 		}
 
-		server, err := db.GetServerByID(*e.GuildID())
+		var server models.ServerModel
+		err := server.GetServerByID(db, *e.GuildID())
 		if err != nil {
 			log.Error("failed to fetch server configuration", "error", err)
 			return err
 		}
 
-		if server == nil {
+		if server == (models.ServerModel{}) {
 			_, err := e.CreateFollowupMessage(discord.MessageCreate{
 				Content: "The server is not configured. ❌ Please run the /init command.",
 				Flags:   discord.MessageFlagEphemeral,
@@ -54,7 +56,8 @@ func ReportHandler() handler.CommandHandler {
 		}
 
 		// Find the CTF associated with the current channel
-		ctf, err := db.GetCTFByChannelID(e.Channel().ID(), *e.GuildID())
+		var ctf models.CTFModel
+		err = ctf.GetCTFByChannelID(db, e.Channel().ID(), *e.GuildID())
 		if err != nil {
 			log.Error("failed to fetch CTF for channel", "error", err)
 			_, sendErr := e.CreateFollowupMessage(discord.MessageCreate{
@@ -67,7 +70,7 @@ func ReportHandler() handler.CommandHandler {
 			}
 			return nil
 		}
-		if ctf == nil {
+		if ctf == (models.CTFModel{}) {
 			_, err := e.CreateFollowupMessage(discord.MessageCreate{
 				Content: "No CTF is associated with this channel. ❌",
 				Flags:   discord.MessageFlagEphemeral,
@@ -75,7 +78,8 @@ func ReportHandler() handler.CommandHandler {
 			return err
 		}
 
-		report, err := db.GetReport(ctf.ID)
+		var report models.ReportModel
+		err = report.GetReportByCTFID(db, ctf.ID)
 		log.Debug("Fetched report from database", "report", report)
 		if err != nil {
 			log.Error("failed to fetch report", "error", err)
@@ -101,12 +105,12 @@ func ReportHandler() handler.CommandHandler {
 		// If report data is missing, fetch from CTFTime
 		// Check if the report was updated in the last day
 		isRecent := false
-		if report != nil {
-			if time.Since(report.LastUpdate) < 24*time.Hour {
+		if report != (models.ReportModel{}) {
+			if time.Since(report.UpdatedAt) < 24*time.Hour {
 				isRecent = true
 			}
 		}
-		if report == nil || report.Place == -1 || report.Score == -1 || !isRecent {
+		if report == (models.ReportModel{}) || report.Place == -1 || report.Score == -1 || !isRecent {
 			log.Debug("Fetching from CTFTime", "ctf_id", ctf.ID)
 			results, err := ctftime.GetResultsInfo(ctf.CTFTimeID, year, server.TeamID)
 			if err != nil {
@@ -122,8 +126,10 @@ func ReportHandler() handler.CommandHandler {
 				return nil
 			}
 			if results != nil {
-				report = results
-				err = db.UpdateReport(ctf.ID, *report)
+				report = *results
+				report.Place = -1
+				report.Score = -1
+				err = report.UpdateReport(db)
 				if err != nil {
 					log.Error("failed to update report in database", "error", err)
 				}

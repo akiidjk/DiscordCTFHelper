@@ -5,6 +5,7 @@ import (
 	"discordutils"
 	"fmt"
 	"log/slog"
+	"models"
 	"time"
 
 	"github.com/charmbracelet/log"
@@ -19,7 +20,7 @@ var creds = discord.SlashCommandCreate{
 
 func CredsHandler() handler.CommandHandler {
 	return func(e *handler.CommandEvent) error {
-		db := database.GetInstance()
+		db := database.GetInstance().Connection()
 		if e.GuildID() == nil {
 			log.Warn("Report command used outside of a guild", "user_id", e.User().ID)
 			_, err := e.CreateFollowupMessage(discord.MessageCreate{
@@ -29,13 +30,19 @@ func CredsHandler() handler.CommandHandler {
 			return err
 		}
 
-		server, err := db.GetServerByID(*e.GuildID())
+		var server models.ServerModel
+		err := server.GetServerByID(db, *e.GuildID())
 		if err != nil {
 			log.Error("failed to fetch server configuration", "error", err)
 			return err
 		}
 
-		if server == nil {
+		if server == (models.ServerModel{}) {
+			if err := e.DeferCreateMessage(true); err != nil {
+				log.Error("failed to defer create message", "error", err)
+				return err
+			}
+
 			_, err := e.CreateFollowupMessage(discord.MessageCreate{
 				Content: "The server is not configured. ❌ Please run the /init command.",
 				Flags:   discord.MessageFlagEphemeral,
@@ -47,13 +54,19 @@ func CredsHandler() handler.CommandHandler {
 			return err
 		}
 
-		ctf, err := db.GetCTFByChannelID(e.Channel().ID(), *e.GuildID())
+		var ctf models.CTFModel
+		err = ctf.GetCTFByChannelID(db, e.Channel().ID(), *e.GuildID())
 		if err != nil {
 			log.Error("failed to fetch CTF by channel ID", "error", err)
 			return err
 		}
 
-		if ctf == nil {
+		if ctf == (models.CTFModel{}) {
+			if err := e.DeferCreateMessage(true); err != nil {
+				log.Error("failed to defer create message", "error", err)
+				return err
+			}
+
 			_, err := e.CreateFollowupMessage(discord.MessageCreate{
 				Content: "No CTF is associated with this channel. ❌",
 				Flags:   discord.MessageFlagEphemeral,
@@ -61,14 +74,16 @@ func CredsHandler() handler.CommandHandler {
 			return err
 		}
 
-		creds, err := db.GetCreds(ctf.ID)
+		var creds models.CredsModel
+		err = creds.GetCredsByCTFID(db, ctf.ID)
 		if err != nil {
 			log.Error("failed to fetch creds by CTF ID", "error", err)
 			return err
 		}
 
 		// If no creds, show modal to create creds
-		if creds == (database.CredsModel{}) {
+		log.Debug("Fetched creds", "creds", creds)
+		if creds == (models.CredsModel{}) {
 			log.Info("No creds found for CTF, showing modal", "ctf_id", ctf.ID)
 			// Modal
 			modal := discord.NewModalCreateBuilder().

@@ -3,6 +3,7 @@ package handlers
 import (
 	"database"
 	"fmt"
+	"models"
 	"strconv"
 
 	"github.com/charmbracelet/log"
@@ -11,8 +12,8 @@ import (
 	"github.com/disgoorg/disgo/events"
 )
 
-func RemoveCTF(e *events.ComponentInteractionCreate, ctf database.CTFModel) error {
-	db := database.GetInstance()
+func RemoveCTF(e *events.ComponentInteractionCreate, ctf models.CTFModel) error {
+	db := database.GetInstance().Connection()
 	channel, err := e.Client().Rest.GetChannel(ctf.TextChannelID)
 	if err != nil {
 		log.Error("Error fetching channel to remove CTF", "err", err, "channel_id", ctf.TextChannelID)
@@ -41,7 +42,8 @@ func RemoveCTF(e *events.ComponentInteractionCreate, ctf database.CTFModel) erro
 		}
 	}
 
-	server, err := db.GetServerByID(ctf.ServerID)
+	var server models.ServerModel
+	err = server.GetServerByID(db, ctf.ServerID)
 	if err != nil {
 		log.Error("Error fetching server for CTF removal", "err", err, "server_id", ctf.ServerID)
 		return err
@@ -65,7 +67,7 @@ func RemoveCTF(e *events.ComponentInteractionCreate, ctf database.CTFModel) erro
 
 func RemoveHandler() bot.EventListener {
 	return bot.NewListenerFunc(func(e *events.ComponentInteractionCreate) {
-		db := database.GetInstance()
+		db := database.GetInstance().Connection()
 
 		values := e.StringSelectMenuInteractionData().Values
 		selectID := e.Data.CustomID()
@@ -85,7 +87,8 @@ func RemoveHandler() bot.EventListener {
 				return
 			}
 
-			ctf, err := db.GetCTFByID(int64(valueInt))
+			var ctf models.CTFModel
+			err = ctf.GetCTFByID(db, int64(valueInt))
 			if err != nil {
 				log.Error("Error fetching CTF by CTFTime ID", "err", err, "ctf_time_id", valueInt)
 				_ = e.CreateMessage(discord.MessageCreate{
@@ -94,7 +97,7 @@ func RemoveHandler() bot.EventListener {
 				})
 				return
 			}
-			if ctf == nil {
+			if ctf == (models.CTFModel{}) {
 				_ = e.CreateMessage(discord.MessageCreate{
 					Content: fmt.Sprintf("No CTF found with CTFTime ID %d.", valueInt),
 					Flags:   discord.MessageFlagEphemeral,
@@ -102,7 +105,7 @@ func RemoveHandler() bot.EventListener {
 				return
 			}
 
-			if err := RemoveCTF(e, *ctf); err != nil {
+			if err := RemoveCTF(e, ctf); err != nil {
 				log.Error("Error removing CTF", "err", err, "ctf_time_id", valueInt)
 				_ = e.CreateMessage(discord.MessageCreate{
 					Content: "Error while removing the CTF.",
@@ -112,7 +115,7 @@ func RemoveHandler() bot.EventListener {
 			}
 
 			// Delete CTF from database
-			db.DeleteCTF(int64(valueInt))
+			ctf.DeleteCTF(db)
 		}
 
 		_ = e.CreateMessage(discord.MessageCreate{

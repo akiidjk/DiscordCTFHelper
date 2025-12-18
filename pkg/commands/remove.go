@@ -2,6 +2,7 @@ package commands
 
 import (
 	"database"
+	"models"
 	"strconv"
 
 	"github.com/charmbracelet/log"
@@ -14,7 +15,7 @@ var remove = discord.SlashCommandCreate{
 	Description: "Remove a CTF event in the discord server.",
 }
 
-func ParseCtfsOptions(ctfs []database.CTFModel) []discord.StringSelectMenuOption {
+func ParseCtfsOptions(ctfs []models.CTFModel) []discord.StringSelectMenuOption {
 	options := make([]discord.StringSelectMenuOption, 0, len(ctfs))
 	for _, ctf := range ctfs {
 		option := discord.NewStringSelectMenuOption(
@@ -28,7 +29,7 @@ func ParseCtfsOptions(ctfs []database.CTFModel) []discord.StringSelectMenuOption
 
 func RemoveHandler() handler.CommandHandler {
 	return func(e *handler.CommandEvent) error {
-		db := database.GetInstance()
+		db := database.GetInstance().Connection()
 		if err := e.DeferCreateMessage(true); err != nil {
 			log.Error("failed to defer create message", "error", err)
 			return err
@@ -43,11 +44,20 @@ func RemoveHandler() handler.CommandHandler {
 			return err
 		}
 
-		ctfs, err := db.GetCTFsList(*e.GuildID())
+		ctfs, err := models.CTFModel{}.GetCTFsList(db, *e.GuildID())
 		if err != nil {
 			log.Error("failed to fetch ctfs list", "error", err)
 			return err
 		}
+
+		if len(ctfs) == 0 {
+			_, err := e.CreateFollowupMessage(discord.MessageCreate{
+				Content: "Non ci sono CTF da rimuovere. ❌",
+				Flags:   discord.MessageFlagEphemeral,
+			})
+			return err
+		}
+
 		msg := discord.MessageCreate{
 			Content: "Seleziona un CTF:",
 			Components: []discord.LayoutComponent{

@@ -3,6 +3,7 @@ package commands
 import (
 	"database"
 	"discordutils"
+	"models"
 
 	"github.com/charmbracelet/log"
 	"github.com/disgoorg/disgo/discord"
@@ -16,7 +17,7 @@ var deleteCreds = discord.SlashCommandCreate{
 
 func DeleteCredsHandler() handler.CommandHandler {
 	return func(e *handler.CommandEvent) error {
-		db := database.GetInstance()
+		db := database.GetInstance().Connection()
 		if err := e.DeferCreateMessage(true); err != nil {
 			log.Error("failed to defer create message", "error", err)
 			return err
@@ -36,7 +37,8 @@ func DeleteCredsHandler() handler.CommandHandler {
 		}
 
 		// Find the CTF associated with the current channel
-		ctf, err := db.GetCTFByChannelID(e.Channel().ID(), *e.GuildID())
+		var ctf models.CTFModel
+		err := ctf.GetCTFByChannelID(db, e.Channel().ID(), *e.GuildID())
 		if err != nil {
 			log.Error("failed to fetch CTF for channel", "error", err)
 			_, sendErr := e.CreateFollowupMessage(discord.MessageCreate{
@@ -49,7 +51,7 @@ func DeleteCredsHandler() handler.CommandHandler {
 			}
 			return nil
 		}
-		if ctf == nil {
+		if ctf == (models.CTFModel{}) {
 			_, err := e.CreateFollowupMessage(discord.MessageCreate{
 				Content: "No CTFs are currently active in this channel. ❌",
 				Flags:   discord.MessageFlagEphemeral,
@@ -57,7 +59,8 @@ func DeleteCredsHandler() handler.CommandHandler {
 			return err
 		}
 
-		creds, err := db.GetCreds(ctf.ID)
+		var creds models.CredsModel
+		err = creds.GetCredsByCTFID(db, ctf.ID)
 		if err != nil {
 			log.Error("failed to fetch creds for CTF", "error", err)
 			_, sendErr := e.CreateFollowupMessage(discord.MessageCreate{
@@ -71,7 +74,7 @@ func DeleteCredsHandler() handler.CommandHandler {
 			return nil
 		}
 
-		if creds == (database.CredsModel{}) {
+		if creds == (models.CredsModel{}) {
 			_, err := e.CreateFollowupMessage(discord.MessageCreate{
 				Content: "No credentials are available for this CTF. ❌",
 				Flags:   discord.MessageFlagEphemeral,
@@ -79,8 +82,8 @@ func DeleteCredsHandler() handler.CommandHandler {
 			return err
 		}
 
-		ok := db.DeleteCreds(ctf.ID)
-		if ok {
+		err = creds.DeleteCreds(db)
+		if err == nil {
 			_, err := e.CreateFollowupMessage(discord.MessageCreate{
 				Content: "Credential removed correctly ✅",
 				Flags:   discord.MessageFlagEphemeral,

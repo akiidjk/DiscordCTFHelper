@@ -3,6 +3,7 @@ package commands
 import (
 	"database"
 	"discordutils"
+	"models"
 
 	"github.com/charmbracelet/log"
 	"github.com/disgoorg/disgo/discord"
@@ -16,7 +17,7 @@ var deleteFlag = discord.SlashCommandCreate{
 
 func DeleteFlagHandler() handler.CommandHandler {
 	return func(e *handler.CommandEvent) error {
-		db := database.GetInstance()
+		db := database.GetInstance().Connection()
 		if err := e.DeferCreateMessage(true); err != nil {
 			log.Error("failed to defer create message", "error", err)
 			return err
@@ -41,13 +42,14 @@ func DeleteFlagHandler() handler.CommandHandler {
 			return err
 		}
 
-		ctf, err := db.GetCTFByChannelID(e.Channel().ID(), *e.GuildID())
+		var ctf models.CTFModel
+		err := ctf.GetCTFByChannelID(db, e.Channel().ID(), *e.GuildID())
 		if err != nil {
 			log.Error("failed to fetch ctf by channel id", "error", err)
 			return err
 		}
 
-		if ctf == nil {
+		if ctf == (models.CTFModel{}) {
 			_, err := e.CreateFollowupMessage(discord.MessageCreate{
 				Content: "No CTFs are currently active in channel. ❌",
 				Flags:   discord.MessageFlagEphemeral,
@@ -65,7 +67,8 @@ func DeleteFlagHandler() handler.CommandHandler {
 			return err
 		}
 
-		report, err := db.GetReport(ctf.ID)
+		var report models.ReportModel
+		err = report.GetReportByCTFID(db, ctf.ID)
 		if err != nil {
 			log.Error("failed to fetch report for ctf", "error", err)
 			_, _ = e.CreateFollowupMessage(discord.MessageCreate{
@@ -74,9 +77,10 @@ func DeleteFlagHandler() handler.CommandHandler {
 			})
 			return err
 		}
-		if report != nil && report.Solves > 0 {
+		if report != (models.ReportModel{}) && report.Solves > 0 {
 			report.Solves -= 1
-			err = db.UpdateReport(ctf.ID, *report)
+			report.CTFID = ctf.ID
+			err = report.UpdateReport(db)
 			if err != nil {
 				log.Error("failed to update report for ctf", "error", err)
 				_, _ = e.CreateFollowupMessage(discord.MessageCreate{
