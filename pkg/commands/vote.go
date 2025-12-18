@@ -2,6 +2,9 @@ package commands
 
 import (
 	"ctftime"
+	"database"
+	"fmt"
+	"models"
 	"time"
 
 	"github.com/charmbracelet/log"
@@ -66,7 +69,24 @@ func VoteHandler() handler.CommandHandler {
 			return err
 		}
 
-		pollTitle := "Vote the next CTF to participate in! 🎉"
+		var server models.Server
+		db := database.GetInstance().Connection()
+		err = server.GetByID(db, *e.GuildID())
+		if err != nil {
+			log.Error("failed to fetch server configuration", "error", err)
+			_, _ = e.CreateFollowupMessage(discord.MessageCreate{
+				Content: "failed to fetch server configuration. ❌",
+				Flags:   discord.MessageFlagEphemeral,
+			})
+			return err
+		}
+
+		role, err := e.Client().Rest.GetRole(*e.GuildID(), server.RoleTeamID)
+		if err != nil {
+			log.Error("failed to get role for voting", "error", err)
+			return err
+		}
+		pollTitle := fmt.Sprintf("%s, Vote the next CTF to participate in! 🎉", role.Mention())
 		log.Info("Creating vote poll", "ctfs_count", len(ctfsThisWeek))
 
 		err = e.CreateMessage(
