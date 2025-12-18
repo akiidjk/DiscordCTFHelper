@@ -81,12 +81,7 @@ func VoteHandler() handler.CommandHandler {
 			return err
 		}
 
-		role, err := e.Client().Rest.GetRole(*e.GuildID(), server.RoleTeamID)
-		if err != nil {
-			log.Error("failed to get role for voting", "error", err)
-			return err
-		}
-		pollTitle := fmt.Sprintf("%s, Vote the next CTF to participate in! 🎉", role.Mention())
+		pollTitle := fmt.Sprintf("<@&%s>, Vote the next CTF to participate in! 🎉", server.RoleTeamID)
 		log.Info("Creating vote poll", "ctfs_count", len(ctfsThisWeek))
 
 		err = e.CreateMessage(
@@ -103,7 +98,7 @@ func VoteHandler() handler.CommandHandler {
 
 						for _, ctf := range ctfsThisWeek {
 							log.Debug("Adding CTF to poll options", "ctf", ctf.Title)
-							text := ctf.Title
+							text := ctf.Title + fmt.Sprintf(" (%d)", ctf.CtfID)
 							options = append(options, discord.PollMedia{
 								Text: &text,
 							})
