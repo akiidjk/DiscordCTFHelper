@@ -13,10 +13,22 @@ import (
 var vote = discord.SlashCommandCreate{
 	Name:        "vote",
 	Description: "Vote the next ctf to participate in",
+	Options: []discord.ApplicationCommandOption{
+		discord.ApplicationCommandOptionInt{
+			Name:        "Duration",
+			Description: "Duration of the vote in hours (default 48h)",
+			Required:    false,
+		},
+	},
 }
 
 func VoteHandler() handler.CommandHandler {
 	return func(e *handler.CommandEvent) error {
+		options := e.SlashCommandInteractionData()
+		duration, ok := options.OptInt("duration")
+		if !ok || duration <= 0 {
+			duration = 48 // default duration 48 hours
+		}
 		if e.GuildID() == nil {
 			log.Warn("Create command used outside of a guild", "user_id", e.User().ID)
 			_, err := e.CreateFollowupMessage(discord.MessageCreate{
@@ -56,8 +68,6 @@ func VoteHandler() handler.CommandHandler {
 		}
 
 		pollTitle := "Vote the next CTF to participate in! 🎉"
-		// emojiName := "🏆"
-
 		log.Info("Creating vote poll", "ctfs_count", len(ctfsThisWeek))
 
 		err = e.CreateMessage(
@@ -68,7 +78,6 @@ func VoteHandler() handler.CommandHandler {
 					AllowMultiselect: false,
 					Question: discord.PollMedia{
 						Text: &pollTitle,
-						// Emoji: &discord.PartialEmoji{Name: &emojiName},
 					},
 					Answers: func() []discord.PollMedia {
 						var options []discord.PollMedia
@@ -82,7 +91,7 @@ func VoteHandler() handler.CommandHandler {
 						}
 						return options
 					}(),
-					Duration: 48,
+					Duration: duration,
 				},
 			},
 		)
