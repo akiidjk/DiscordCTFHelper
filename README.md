@@ -1,5 +1,9 @@
 # DiscordCTFHelper
 
+<div align="center">
+  <img src="images/logo.png" alt="logo" width="400"/>
+</div>
+
 > A powerful and customizable bot to manage and organize CTF competitions on Discord.
 
 ## Table of Contents
