@@ -5,5 +5,5 @@ services:
       dockerfile: Dockerfile
     container_name: bot_container
     volumes:
-      - ./ctfs.db:/ctfs.db
+      - ./data:/data
     restart: unless-stopped

@@ -21,7 +21,7 @@ func (db *Database) Connection() *gorm.DB {
 
 func (db *Database) Init() error {
 	var err error
-	db.connection, err = gorm.Open(sqlite.Open("ctfs.db"), &gorm.Config{})
+	db.connection, err = gorm.Open(sqlite.Open("data/ctfs.db"), &gorm.Config{})
 	if err != nil {
 		log.Fatal("failed to connect database")
 	}
