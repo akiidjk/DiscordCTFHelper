@@ -50,13 +50,13 @@ func CredsModalListener() bot.EventListener {
 				break
 			}
 
-			creds := models.CredsModel{
+			creds := models.Creds{
 				Username: username,
 				Password: password,
 				Personal: personal,
 				CTFID:    int64(ctfID),
 			}
-			err = creds.AddCreds(db)
+			err = creds.Add(db)
 			if err != nil {
 				log.Error("Error adding credentials to database", "err", err, "ctf_id", ctfID)
 				content = "Error saving credentials."

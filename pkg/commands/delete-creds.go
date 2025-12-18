@@ -37,8 +37,8 @@ func DeleteCredsHandler() handler.CommandHandler {
 		}
 
 		// Find the CTF associated with the current channel
-		var ctf models.CTFModel
-		err := ctf.GetCTFByChannelID(db, e.Channel().ID(), *e.GuildID())
+		var ctf models.CTF
+		err := ctf.GetByChannelID(db, e.Channel().ID(), *e.GuildID())
 		if err != nil {
 			log.Error("failed to fetch CTF for channel", "error", err)
 			_, sendErr := e.CreateFollowupMessage(discord.MessageCreate{
@@ -51,7 +51,7 @@ func DeleteCredsHandler() handler.CommandHandler {
 			}
 			return nil
 		}
-		if ctf == (models.CTFModel{}) {
+		if ctf == (models.CTF{}) {
 			_, err := e.CreateFollowupMessage(discord.MessageCreate{
 				Content: "No CTFs are currently active in this channel. ❌",
 				Flags:   discord.MessageFlagEphemeral,
@@ -59,8 +59,8 @@ func DeleteCredsHandler() handler.CommandHandler {
 			return err
 		}
 
-		var creds models.CredsModel
-		err = creds.GetCredsByCTFID(db, ctf.ID)
+		var creds models.Creds
+		err = creds.GetByCTFID(db, ctf.ID)
 		if err != nil {
 			log.Error("failed to fetch creds for CTF", "error", err)
 			_, sendErr := e.CreateFollowupMessage(discord.MessageCreate{
@@ -74,7 +74,7 @@ func DeleteCredsHandler() handler.CommandHandler {
 			return nil
 		}
 
-		if creds == (models.CredsModel{}) {
+		if creds == (models.Creds{}) {
 			_, err := e.CreateFollowupMessage(discord.MessageCreate{
 				Content: "No credentials are available for this CTF. ❌",
 				Flags:   discord.MessageFlagEphemeral,
@@ -82,7 +82,7 @@ func DeleteCredsHandler() handler.CommandHandler {
 			return err
 		}
 
-		err = creds.DeleteCreds(db)
+		err = creds.Delete(db)
 		if err == nil {
 			_, err := e.CreateFollowupMessage(discord.MessageCreate{
 				Content: "Credential removed correctly ✅",

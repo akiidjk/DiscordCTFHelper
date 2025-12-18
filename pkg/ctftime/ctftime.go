@@ -165,7 +165,7 @@ type ResultScore struct {
 	Solves int    `json:"solves"`
 }
 
-func GetResultsInfo(ctftimeID int64, year int, teamID int64) (*models.ReportModel, error) {
+func GetResultsInfo(ctftimeID int64, year int, teamID int64) (*models.Report, error) {
 	log.Debug("Getting results for event with ID", "ctftime_id", ctftimeID)
 	url := fmt.Sprintf("%s/results/%d/", BaseURL, year)
 	log.Debug("Fetching CTF results from URL:", "url", url)
@@ -216,7 +216,7 @@ func GetResultsInfo(ctftimeID int64, year int, teamID int64) (*models.ReportMode
 				return nil, err
 			}
 			scoreInt := int(scoreFloat)
-			report := &models.ReportModel{
+			report := &models.Report{
 				Place:  result.Place,
 				Score:  scoreInt,
 				Solves: result.Solves,

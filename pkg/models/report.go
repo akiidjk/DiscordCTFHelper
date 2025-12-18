@@ -6,8 +6,8 @@ import (
 	"gorm.io/gorm"
 )
 
-// ReportModel represents a CTF report with results
-type ReportModel struct {
+// Report represents a CTF report with results
+type Report struct {
 	gorm.Model
 	ID        int64 `gorm:"primaryKey"`
 	CTFID     int64 `gorm:"not null;index"`
@@ -18,15 +18,15 @@ type ReportModel struct {
 	UpdatedAt time.Time
 }
 
-// AddReport adds a report to the database.
-func (report *ReportModel) AddReport(db *gorm.DB) error {
+// Add adds a report to the database.
+func (report *Report) Add(db *gorm.DB) error {
 	report.UpdatedAt = time.Now()
 	return db.Create(report).Error
 }
 
-// GetReportByCTFID retrieves a report from the database for a specific CTF.
-func (report *ReportModel) GetReportByCTFID(db *gorm.DB, ctfID int64) error {
-	result := db.Where(ReportModel{CTFID: ctfID}).First(report)
+// GetByCTFID retrieves a report from the database for a specific CTF.
+func (report *Report) GetByCTFID(db *gorm.DB, ctfID int64) error {
+	result := db.Where(Report{CTFID: ctfID}).First(report)
 	if result.Error != nil {
 		if result.Error == gorm.ErrRecordNotFound {
 			return nil
@@ -36,11 +36,11 @@ func (report *ReportModel) GetReportByCTFID(db *gorm.DB, ctfID int64) error {
 	return nil
 }
 
-// UpdateReport updates a report in the database. If it does not exist, it creates it.
-func (report *ReportModel) UpdateReport(db *gorm.DB) error {
-	result := db.Model(&ReportModel{}).
-		Where(ReportModel{CTFID: report.CTFID}).
-		Updates(ReportModel{
+// Update updates a report in the database. If it does not exist, it creates it.
+func (report *Report) Update(db *gorm.DB) error {
+	result := db.Model(&Report{}).
+		Where(Report{CTFID: report.CTFID}).
+		Updates(Report{
 			Place:  report.Place,
 			Solves: report.Solves,
 			Score:  report.Score,
@@ -57,7 +57,7 @@ func (report *ReportModel) UpdateReport(db *gorm.DB) error {
 	return nil
 }
 
-// DeleteReport deletes a report from the database by CTFID.
-func (_ *ReportModel) DeleteReport(db *gorm.DB, ctfID int64) error {
-	return db.Delete(&ReportModel{}, ReportModel{CTFID: ctfID}).Error
+// Delete deletes a report from the database by CTFID.
+func (_ *Report) Delete(db *gorm.DB, ctfID int64) error {
+	return db.Delete(&Report{}, Report{CTFID: ctfID}).Error
 }

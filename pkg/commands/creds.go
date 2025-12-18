@@ -30,14 +30,14 @@ func CredsHandler() handler.CommandHandler {
 			return err
 		}
 
-		var server models.ServerModel
-		err := server.GetServerByID(db, *e.GuildID())
+		var server models.Server
+		err := server.GetByID(db, *e.GuildID())
 		if err != nil {
 			log.Error("failed to fetch server configuration", "error", err)
 			return err
 		}
 
-		if server == (models.ServerModel{}) {
+		if server == (models.Server{}) {
 			if err := e.DeferCreateMessage(true); err != nil {
 				log.Error("failed to defer create message", "error", err)
 				return err
@@ -54,14 +54,14 @@ func CredsHandler() handler.CommandHandler {
 			return err
 		}
 
-		var ctf models.CTFModel
-		err = ctf.GetCTFByChannelID(db, e.Channel().ID(), *e.GuildID())
+		var ctf models.CTF
+		err = ctf.GetByChannelID(db, e.Channel().ID(), *e.GuildID())
 		if err != nil {
 			log.Error("failed to fetch CTF by channel ID", "error", err)
 			return err
 		}
 
-		if ctf == (models.CTFModel{}) {
+		if ctf == (models.CTF{}) {
 			if err := e.DeferCreateMessage(true); err != nil {
 				log.Error("failed to defer create message", "error", err)
 				return err
@@ -74,8 +74,8 @@ func CredsHandler() handler.CommandHandler {
 			return err
 		}
 
-		var creds models.CredsModel
-		err = creds.GetCredsByCTFID(db, ctf.ID)
+		var creds models.Creds
+		err = creds.GetByCTFID(db, ctf.ID)
 		if err != nil {
 			log.Error("failed to fetch creds by CTF ID", "error", err)
 			return err
@@ -83,7 +83,7 @@ func CredsHandler() handler.CommandHandler {
 
 		// If no creds, show modal to create creds
 		log.Debug("Fetched creds", "creds", creds)
-		if creds == (models.CredsModel{}) {
+		if creds == (models.Creds{}) {
 			log.Info("No creds found for CTF, showing modal", "ctf_id", ctf.ID)
 			// Modal
 			modal := discord.NewModalCreateBuilder().

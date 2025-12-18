@@ -42,14 +42,14 @@ func DeleteFlagHandler() handler.CommandHandler {
 			return err
 		}
 
-		var ctf models.CTFModel
-		err := ctf.GetCTFByChannelID(db, e.Channel().ID(), *e.GuildID())
+		var ctf models.CTF
+		err := ctf.GetByChannelID(db, e.Channel().ID(), *e.GuildID())
 		if err != nil {
 			log.Error("failed to fetch ctf by channel id", "error", err)
 			return err
 		}
 
-		if ctf == (models.CTFModel{}) {
+		if ctf == (models.CTF{}) {
 			_, err := e.CreateFollowupMessage(discord.MessageCreate{
 				Content: "No CTFs are currently active in channel. ❌",
 				Flags:   discord.MessageFlagEphemeral,
@@ -67,8 +67,8 @@ func DeleteFlagHandler() handler.CommandHandler {
 			return err
 		}
 
-		var report models.ReportModel
-		err = report.GetReportByCTFID(db, ctf.ID)
+		var report models.Report
+		err = report.GetByCTFID(db, ctf.ID)
 		if err != nil {
 			log.Error("failed to fetch report for ctf", "error", err)
 			_, _ = e.CreateFollowupMessage(discord.MessageCreate{
@@ -77,10 +77,10 @@ func DeleteFlagHandler() handler.CommandHandler {
 			})
 			return err
 		}
-		if report != (models.ReportModel{}) && report.Solves > 0 {
+		if report != (models.Report{}) && report.Solves > 0 {
 			report.Solves -= 1
 			report.CTFID = ctf.ID
-			err = report.UpdateReport(db)
+			err = report.Update(db)
 			if err != nil {
 				log.Error("failed to update report for ctf", "error", err)
 				_, _ = e.CreateFollowupMessage(discord.MessageCreate{

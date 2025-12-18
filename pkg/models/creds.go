@@ -6,8 +6,8 @@ import (
 	"gorm.io/gorm"
 )
 
-// CredsModel represents credentials for a CTF
-type CredsModel struct {
+// Creds represents credentials for a CTF
+type Creds struct {
 	gorm.Model
 	ID        int64 `gorm:"primaryKey"`
 	Username  string
@@ -18,15 +18,15 @@ type CredsModel struct {
 	UpdatedAt time.Time
 }
 
-// AddCreds adds credentials to the database.
-func (creds *CredsModel) AddCreds(db *gorm.DB) error {
+// Add adds credentials to the database.
+func (creds *Creds) Add(db *gorm.DB) error {
 	creds.UpdatedAt = time.Now()
 	return db.Create(creds).Error
 }
 
-// GetCredsByCTFID retrieves credentials from the database for a specific CTF.
-func (creds *CredsModel) GetCredsByCTFID(db *gorm.DB, ctfID int64) error {
-	result := db.Where(CredsModel{CTFID: ctfID}).First(creds)
+// GetByCTFID retrieves credentials from the database for a specific CTF.
+func (creds *Creds) GetByCTFID(db *gorm.DB, ctfID int64) error {
+	result := db.Where(Creds{CTFID: ctfID}).First(creds)
 	if result.Error != nil {
 		if result.Error == gorm.ErrRecordNotFound {
 			return nil
@@ -36,11 +36,11 @@ func (creds *CredsModel) GetCredsByCTFID(db *gorm.DB, ctfID int64) error {
 	return nil
 }
 
-// UpdateCreds updates credentials in the database. If they do not exist, it creates them.
-func (creds *CredsModel) UpdateCreds(db *gorm.DB, ctfID int64) error {
-	result := db.Model(&CredsModel{}).
-		Where(CredsModel{CTFID: ctfID}).
-		Updates(CredsModel{
+// Update updates credentials in the database. If they do not exist, it creates them.
+func (creds *Creds) Update(db *gorm.DB, ctfID int64) error {
+	result := db.Model(&Creds{}).
+		Where(Creds{CTFID: ctfID}).
+		Updates(Creds{
 			Username: creds.Username,
 			Password: creds.Password,
 			Personal: creds.Personal,
@@ -58,7 +58,7 @@ func (creds *CredsModel) UpdateCreds(db *gorm.DB, ctfID int64) error {
 	return nil
 }
 
-// DeleteCreds deletes credentials from the database by CTFID.
-func (creds *CredsModel) DeleteCreds(db *gorm.DB) error {
-	return db.Delete(&CredsModel{}, CredsModel{CTFID: creds.CTFID}).Error
+// Delete deletes credentials from the database by CTFID.
+func (creds *Creds) Delete(db *gorm.DB) error {
+	return db.Delete(&Creds{}, Creds{CTFID: creds.CTFID}).Error
 }

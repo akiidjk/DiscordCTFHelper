@@ -50,8 +50,8 @@ func VotePollHandler() bot.EventListener {
 					log.Error("Error during CTFTime ID conversion", "err", err, "ctf_time_id", ctftimeID)
 					return
 				}
-				var server models.ServerModel
-				err = server.GetServerByID(db, *e.GuildID)
+				var server models.Server
+				err = server.GetByID(db, *e.GuildID)
 				if err != nil {
 					log.Error("Error fetching server configuration", "err", err, "guild_id", *e.GuildID)
 					return

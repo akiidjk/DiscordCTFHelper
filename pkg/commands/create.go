@@ -30,7 +30,7 @@ var create = discord.SlashCommandCreate{
 	},
 }
 
-func CreateCTF(guildId *snowflake.ID, client *bot.Client, ctfTimeId int, server models.ServerModel) error {
+func CreateCTF(guildId *snowflake.ID, client *bot.Client, ctfTimeId int, server models.Server) error {
 	db := database.GetInstance().Connection()
 	data, err := ctftime.GetCTFInfo(ctfTimeId)
 	if err != nil {
@@ -63,11 +63,11 @@ func CreateCTF(guildId *snowflake.ID, client *bot.Client, ctfTimeId int, server 
 
 	title := fmt.Sprintf("%s - %d", data.Title, startTime.Year())
 
-	ctf := models.CTFModel{
+	ctf := models.CTF{
 		Name:     title,
 		ServerID: *guildId,
 	}
-	present, err := ctf.IsCTFPresent(db)
+	present, err := ctf.IsPresent(db)
 	if err != nil {
 		log.Error("failed to check existing CTF", "error", err)
 		return err
@@ -178,7 +178,7 @@ func CreateCTF(guildId *snowflake.ID, client *bot.Client, ctfTimeId int, server 
 		return errors.New("failed to create scheduled event")
 	}
 
-	ctf = models.CTFModel{
+	ctf = models.CTF{
 		ServerID:      *guildId,
 		Name:          title,
 		Description:   description,
@@ -189,7 +189,7 @@ func CreateCTF(guildId *snowflake.ID, client *bot.Client, ctfTimeId int, server 
 		CTFTimeID:     int64(ctfTimeId),
 	}
 
-	if err := ctf.AddCTF(db); err != nil {
+	if err := ctf.Add(db); err != nil {
 		log.Error("failed to add CTF to database", "error", err)
 		return err
 	}
@@ -217,8 +217,8 @@ func CreateHandler() handler.CommandHandler {
 		options := e.SlashCommandInteractionData()
 		ctfTimeID := options.Int("ctftime_id")
 
-		var server models.ServerModel
-		err := server.GetServerByID(db, *e.GuildID())
+		var server models.Server
+		err := server.GetByID(db, *e.GuildID())
 		if err != nil {
 			log.Error("failed to fetch server configuration", "error", err)
 			_, _ = e.CreateFollowupMessage(discord.MessageCreate{
@@ -228,7 +228,7 @@ func CreateHandler() handler.CommandHandler {
 			return err
 		}
 
-		if server == (models.ServerModel{}) {
+		if server == (models.Server{}) {
 			_, err := e.CreateFollowupMessage(discord.MessageCreate{
 				Content: "The server is not configured. ❌ Please run the /init command.",
 				Flags:   discord.MessageFlagEphemeral,
@@ -262,8 +262,8 @@ func CreateHandler() handler.CommandHandler {
 		}
 
 		// Fetch the created CTF to confirm and announce
-		var ctf models.CTFModel
-		err = ctf.GetCTFByCTFTimeID(db, int64(ctfTimeID))
+		var ctf models.CTF
+		err = ctf.GetByTimeID(db, int64(ctfTimeID))
 		if err != nil {
 			log.Error("failed to fetch CTF after creation", "error", err)
 			_, _ = e.CreateFollowupMessage(discord.MessageCreate{
@@ -272,7 +272,7 @@ func CreateHandler() handler.CommandHandler {
 			})
 			return err
 		}
-		if ctf == (models.CTFModel{}) {
+		if ctf == (models.CTF{}) {
 			log.Error("CTF not found after creation")
 			_, _ = e.CreateFollowupMessage(discord.MessageCreate{
 				Content: "CTF not found after creation. ❌",

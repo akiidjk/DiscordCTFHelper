@@ -59,8 +59,8 @@ func ChallHandler() handler.CommandHandler {
 			return err
 		}
 
-		var ctf models.CTFModel
-		err := ctf.GetCTFByChannelID(
+		var ctf models.CTF
+		err := ctf.GetByChannelID(
 			db,
 			e.Channel().ID(),
 			*e.GuildID(),
@@ -69,7 +69,7 @@ func ChallHandler() handler.CommandHandler {
 			log.Error("failed to fetch CTF by channel ID", "error", err)
 			return err
 		}
-		if ctf == (models.CTFModel{}) {
+		if ctf == (models.CTF{}) {
 			_, err := e.CreateFollowupMessage(discord.MessageCreate{
 				Content: "No CTF is associated with this channel. ❌",
 				Flags:   discord.MessageFlagEphemeral,

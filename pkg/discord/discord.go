@@ -39,12 +39,12 @@ func CheckPermission(e *handler.CommandEvent) error {
 		return err
 	}
 
-	var server models.ServerModel
-	err = server.GetServerByID(db, *guildID)
+	var server models.Server
+	err = server.GetByID(db, *guildID)
 	if err != nil {
 		return err
 	}
-	if server == (models.ServerModel{}) {
+	if server == (models.Server{}) {
 		return sendEphemeral("Server configuration not found. ❌")
 	}
 

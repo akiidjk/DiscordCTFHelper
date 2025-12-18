@@ -26,7 +26,7 @@ func (db *Database) Init() error {
 		log.Fatal("failed to connect database")
 	}
 
-	err = db.connection.AutoMigrate(&models.ServerModel{}, &models.CTFModel{}, &models.ReportModel{}, &models.CredsModel{})
+	err = db.connection.AutoMigrate(&models.Server{}, &models.CTF{}, &models.Report{}, &models.Creds{})
 	if err != nil {
 		log.Fatal(err)
 	}

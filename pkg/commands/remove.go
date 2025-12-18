@@ -15,7 +15,7 @@ var remove = discord.SlashCommandCreate{
 	Description: "Remove a CTF event in the discord server.",
 }
 
-func ParseCtfsOptions(ctfs []models.CTFModel) []discord.StringSelectMenuOption {
+func ParseCtfsOptions(ctfs []models.CTF) []discord.StringSelectMenuOption {
 	options := make([]discord.StringSelectMenuOption, 0, len(ctfs))
 	for _, ctf := range ctfs {
 		option := discord.NewStringSelectMenuOption(
@@ -44,7 +44,7 @@ func RemoveHandler() handler.CommandHandler {
 			return err
 		}
 
-		ctfs, err := models.CTFModel{}.GetCTFsList(db, *e.GuildID())
+		ctfs, err := models.CTF{}.GetList(db, *e.GuildID())
 		if err != nil {
 			log.Error("failed to fetch ctfs list", "error", err)
 			return err

@@ -103,22 +103,22 @@ func InitHandler() handler.CommandHandler {
 			"guild_id", e.GuildID(),
 		)
 
-		var server models.ServerModel
-		err := server.GetServerByID(db, *e.GuildID())
+		var server models.Server
+		err := server.GetByID(db, *e.GuildID())
 		if err != nil {
 			log.Error("failed to get server by ID", "guild_id", e.GuildID(), "error", err)
 			return err
 		}
-		if server != (models.ServerModel{}) {
+		if server != (models.Server{}) {
 			log.Info("Server already exists, deleting old config", "guild_id", e.GuildID())
-			if err := server.DeleteServer(db); err != nil {
+			if err := server.Delete(db); err != nil {
 				log.Error("failed to delete existing server config", "guild_id", e.GuildID(), "error", err)
 				return err
 			}
 		}
 
 		log.Info("Adding new server config", "guild_id", e.GuildID())
-		server = models.ServerModel{
+		server = models.Server{
 			ID:                *e.GuildID(),
 			ActiveCategoryID:  categoryActive.ID,
 			ArchiveCategoryID: archiveCategory.ID,
@@ -127,7 +127,7 @@ func InitHandler() handler.CommandHandler {
 			TeamID:            int64(teamID),
 			RoleTeamID:        roleTeam.ID,
 		}
-		if err := server.AddServer(db); err != nil {
+		if err := server.Add(db); err != nil {
 			log.Error("failed to add server config", "guild_id", e.GuildID(), "error", err)
 			return err
 		}

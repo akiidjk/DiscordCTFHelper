@@ -12,7 +12,7 @@ import (
 	"github.com/disgoorg/disgo/events"
 )
 
-func RemoveCTF(e *events.ComponentInteractionCreate, ctf models.CTFModel) error {
+func RemoveCTF(e *events.ComponentInteractionCreate, ctf models.CTF) error {
 	db := database.GetInstance().Connection()
 	channel, err := e.Client().Rest.GetChannel(ctf.TextChannelID)
 	if err != nil {
@@ -42,8 +42,8 @@ func RemoveCTF(e *events.ComponentInteractionCreate, ctf models.CTFModel) error 
 		}
 	}
 
-	var server models.ServerModel
-	err = server.GetServerByID(db, ctf.ServerID)
+	var server models.Server
+	err = server.GetByID(db, ctf.ServerID)
 	if err != nil {
 		log.Error("Error fetching server for CTF removal", "err", err, "server_id", ctf.ServerID)
 		return err
@@ -87,8 +87,8 @@ func RemoveHandler() bot.EventListener {
 				return
 			}
 
-			var ctf models.CTFModel
-			err = ctf.GetCTFByID(db, int64(valueInt))
+			var ctf models.CTF
+			err = ctf.GetByID(db, int64(valueInt))
 			if err != nil {
 				log.Error("Error fetching CTF by CTFTime ID", "err", err, "ctf_time_id", valueInt)
 				_ = e.CreateMessage(discord.MessageCreate{
@@ -97,7 +97,7 @@ func RemoveHandler() bot.EventListener {
 				})
 				return
 			}
-			if ctf == (models.CTFModel{}) {
+			if ctf == (models.CTF{}) {
 				_ = e.CreateMessage(discord.MessageCreate{
 					Content: fmt.Sprintf("No CTF found with CTFTime ID %d.", valueInt),
 					Flags:   discord.MessageFlagEphemeral,
@@ -115,7 +115,7 @@ func RemoveHandler() bot.EventListener {
 			}
 
 			// Delete CTF from database
-			ctf.DeleteCTF(db)
+			ctf.Delete(db)
 		}
 
 		_ = e.CreateMessage(discord.MessageCreate{

@@ -17,13 +17,13 @@ func ScheduleEventUpdateHandler() bot.EventListener {
 			db := database.GetInstance().Connection()
 
 			// Get CTF by event name and guild ID
-			var ctf models.CTFModel
-			err := ctf.GetCTFByName(db, e.GuildScheduled.Name, e.GuildScheduled.GuildID)
+			var ctf models.CTF
+			err := ctf.GetByName(db, e.GuildScheduled.Name, e.GuildScheduled.GuildID)
 			if err != nil {
 				log.Error("Error fetching CTF by name for scheduled event update", "err", err, "ctf_name", e.GuildScheduled.Name, "guild_id", e.GuildScheduled.GuildID)
 				return
 			}
-			if ctf == (models.CTFModel{}) {
+			if ctf == (models.CTF{}) {
 				log.Info("CTF not found in database for scheduled event update", "ctf_name", e.GuildScheduled.Name)
 				return
 			}
@@ -49,8 +49,8 @@ func ScheduleEventUpdateHandler() bot.EventListener {
 					return
 				}
 
-				var server models.ServerModel
-				err = server.GetServerByID(db, ctf.ServerID)
+				var server models.Server
+				err = server.GetByID(db, ctf.ServerID)
 				if err != nil {
 					log.Error("failed to fetch server for CTF archiving", "err", err, "server_id", ctf.ServerID)
 					return
@@ -58,7 +58,7 @@ func ScheduleEventUpdateHandler() bot.EventListener {
 
 				// Move channel to archive category if possible
 				pos := 0
-				if server != (models.ServerModel{}) && server.ArchiveCategoryID != 0 && channel.Type() == discord.ChannelTypeGuildText {
+				if server != (models.Server{}) && server.ArchiveCategoryID != 0 && channel.Type() == discord.ChannelTypeGuildText {
 					_, err := e.Client().Rest.UpdateChannel(channel.ID(), discord.GuildTextChannelUpdate{
 						ParentID: &server.ArchiveCategoryID,
 						Position: &pos,

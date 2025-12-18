@@ -56,13 +56,13 @@ func FlagHandler() handler.CommandHandler {
 		mate, okMate := options.OptMember("mate")
 		challengeName, okChallenge := options.OptString("challenge_name")
 
-		var ctf models.CTFModel
-		err := ctf.GetCTFByChannelID(db, e.Channel().ID(), *e.GuildID())
+		var ctf models.CTF
+		err := ctf.GetByChannelID(db, e.Channel().ID(), *e.GuildID())
 		if err != nil {
 			log.Error("failed to fetch ctf by channel id", "error", err)
 			return err
 		}
-		if ctf == (models.CTFModel{}) {
+		if ctf == (models.CTF{}) {
 			_, err := e.CreateFollowupMessage(discord.MessageCreate{
 				Content: "No CTFs are currently active in channel. ❌",
 				Flags:   discord.MessageFlagEphemeral,
@@ -70,25 +70,25 @@ func FlagHandler() handler.CommandHandler {
 			return err
 		}
 
-		var report models.ReportModel
-		err = report.GetReportByCTFID(db, ctf.ID)
+		var report models.Report
+		err = report.GetByCTFID(db, ctf.ID)
 		if err != nil {
 			log.Error("failed to fetch report for ctf", "error", err)
 			return err
 		}
 
-		if report == (models.ReportModel{}) {
-			report = models.ReportModel{
+		if report == (models.Report{}) {
+			report = models.Report{
 				CTFID:  ctf.ID,
 				Place:  -1,
 				Score:  -1,
 				Solves: 1,
 			}
-			report.AddReport(db)
+			report.Add(db)
 		} else {
 			report.Solves += 1
 			report.CTFID = ctf.ID
-			report.UpdateReport(db)
+			report.Update(db)
 		}
 
 		content := fmt.Sprintf("<@&%s> NEW FLAG FOUND BY %s", ctf.RoleID, e.User().Mention())

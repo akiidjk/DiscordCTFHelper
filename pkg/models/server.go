@@ -7,8 +7,8 @@ import (
 	"gorm.io/gorm"
 )
 
-// ServerModel represents a Discord server configuration
-type ServerModel struct {
+// Server represents a Discord server configuration
+type Server struct {
 	gorm.Model
 	ID                snowflake.ID `gorm:"primaryKey"`
 	ActiveCategoryID  snowflake.ID
@@ -21,12 +21,12 @@ type ServerModel struct {
 	UpdatedAt         time.Time
 }
 
-func (server *ServerModel) AddServer(db *gorm.DB) error {
+func (server *Server) Add(db *gorm.DB) error {
 	return db.Create(server).Error
 }
 
-func (server *ServerModel) GetServerByID(db *gorm.DB, serverID snowflake.ID) error {
-	result := db.First(&server, ServerModel{ID: serverID})
+func (server *Server) GetByID(db *gorm.DB, serverID snowflake.ID) error {
+	result := db.First(&server, Server{ID: serverID})
 	if result.Error != nil {
 		if result.Error == gorm.ErrRecordNotFound {
 			return nil
@@ -36,15 +36,15 @@ func (server *ServerModel) GetServerByID(db *gorm.DB, serverID snowflake.ID) err
 	return nil
 }
 
-func (server *ServerModel) EditCategory(db *gorm.DB, activeCategoryID, archiveCategoryID snowflake.ID) error {
-	return db.Model(&ServerModel{}).
-		Where(ServerModel{ID: server.ID}).
-		Updates(ServerModel{
+func (server *Server) EditCategory(db *gorm.DB, activeCategoryID, archiveCategoryID snowflake.ID) error {
+	return db.Model(&Server{}).
+		Where(Server{ID: server.ID}).
+		Updates(Server{
 			ActiveCategoryID:  activeCategoryID,
 			ArchiveCategoryID: archiveCategoryID,
 		}).Error
 }
 
-func (server *ServerModel) DeleteServer(db *gorm.DB) error {
-	return db.Delete(&ServerModel{}, ServerModel{ID: server.ID}).Error
+func (server *Server) Delete(db *gorm.DB) error {
+	return db.Delete(&Server{}, Server{ID: server.ID}).Error
 }
