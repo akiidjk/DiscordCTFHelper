@@ -10,7 +10,7 @@ import (
 type Report struct {
 	gorm.Model
 	ID        int64 `gorm:"primaryKey"`
-	CTFID     int64 `gorm:"not null;index"`
+	CTFID     int64 `gorm:"not null"`
 	Place     int
 	Solves    int
 	Score     int

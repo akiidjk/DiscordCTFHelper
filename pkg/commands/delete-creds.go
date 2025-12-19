@@ -17,11 +17,11 @@ var deleteCreds = discord.SlashCommandCreate{
 
 func DeleteCredsHandler() handler.CommandHandler {
 	return func(e *handler.CommandEvent) error {
-		db := database.GetInstance().Connection()
 		if err := e.DeferCreateMessage(true); err != nil {
 			log.Error("failed to defer create message", "error", err)
 			return err
 		}
+		db := database.GetInstance().Connection()
 
 		if e.GuildID() == nil {
 			log.Warn("Delete-creds command used outside of a guild", "user_id", e.User().ID)

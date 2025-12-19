@@ -13,7 +13,7 @@ type Creds struct {
 	Username  string
 	Password  string
 	Personal  bool
-	CTFID     int64 `gorm:"not null;uniqueIndex"`
+	CTFID     int64 `gorm:"not null"`
 	CreatedAt time.Time
 	UpdatedAt time.Time
 }

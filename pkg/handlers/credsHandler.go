@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"database"
+	"fmt"
 	"models"
 	"strconv"
 	"strings"
@@ -50,6 +51,20 @@ func CredsModalListener() bot.EventListener {
 				break
 			}
 
+			var ctf models.CTF
+			err = ctf.GetByChannelID(db, e.Channel().ID(), *e.GuildID())
+			if err != nil {
+				log.Error("Error fetching ctf", "err", err, "guild_id", *e.GuildID())
+				content = "Error processing modal submission."
+				break
+			}
+			if ctf.ID != int64(ctfID) {
+				log.Error("CTF ID mismatch", "expected_ctf_id", ctf.ID, "modal_ctf_id", ctfID)
+				content = "Error processing modal submission."
+				break
+			}
+
+			// Save the credentials to the database
 			creds := models.Creds{
 				Username: username,
 				Password: password,
@@ -62,7 +77,7 @@ func CredsModalListener() bot.EventListener {
 				content = "Error saving credentials."
 				break
 			}
-			content += "Credentials submitted ✅."
+			content += fmt.Sprintf("<@&%s>, Credentials submitted ✅.", ctf.RoleID)
 		default:
 			content = "Unknown modal submitted."
 		}
