@@ -24,18 +24,31 @@ func VotePollHandler() bot.EventListener {
 			return
 		}
 
-		if e.Message.Type == discord.MessageTypePollResult && e.Message.Author.ID == *e.Message.ApplicationID {
+		if e.Message.Type == discord.MessageTypePollResult && e.Message.Author.ID == e.Client().ID() {
 			if e.Message.MessageReference == nil || e.Message.MessageReference.MessageID == nil {
-				log.Error("Poll result message does not have a message reference")
+				log.Error("Poll result message does not have a message reference",
+					"guild_id", *e.GuildID,
+					"channel_id", e.ChannelID,
+					"message_id", e.Message.ID,
+				)
 				return
 			}
+
 			message, err := e.Client().Rest.GetMessage(e.ChannelID, *e.Message.MessageReference.MessageID)
 			if err != nil {
-				log.Error("failed to fetch original message for poll result", "err", err, "message_id", e.Message.MessageReference.MessageID)
+				log.Error("Failed to fetch original message for poll result",
+					"err", err,
+					"channel_id", e.ChannelID,
+					"message_id", e.Message.MessageReference.MessageID,
+				)
 				return
 			}
+
 			if message.Poll == nil || message.Poll.Results == nil {
-				log.Error("Original message does not contain poll data")
+				log.Error("Original message does not contain poll data",
+					"channel_id", e.ChannelID,
+					"original_message_id", message.ID,
+				)
 				return
 			}
 
@@ -47,7 +60,11 @@ func VotePollHandler() bot.EventListener {
 			}
 
 			if maxVotes <= 0 {
-				log.Warn("No votes in the poll")
+				log.Warn("No votes in the poll",
+					"guild_id", *e.GuildID,
+					"channel_id", e.ChannelID,
+					"message_id", message.ID,
+				)
 				return
 			}
 
@@ -60,11 +77,22 @@ func VotePollHandler() bot.EventListener {
 
 			if len(winningIndices) == 1 {
 				maxIndex := winningIndices[0]
+
 				if maxIndex >= 0 && maxIndex < len(message.Poll.Answers) {
 					bestAnswer := *message.Poll.Answers[maxIndex].PollMedia.Text
 					log.Info("Most voted answer found", "answer", bestAnswer, "votes", maxVotes)
-					ctftimeID := strings.TrimSpace(bestAnswer[strings.LastIndex(bestAnswer, "(")+1 : len(bestAnswer)-1])
-					log.Info("CTFTime ID estratto", "ctf_time_id", ctftimeID)
+
+					openParen := strings.LastIndex(bestAnswer, "(")
+					closeParen := strings.LastIndex(bestAnswer, ")")
+
+					if openParen == -1 || closeParen == -1 || openParen >= closeParen {
+						log.Error("Failed to parse CTFTime ID from answer text",
+							"answer", bestAnswer,
+						)
+						return
+					}
+
+					ctftimeID := strings.TrimSpace(bestAnswer[openParen+1 : closeParen])
 					ctfTimeIDInt, err := strconv.Atoi(ctftimeID)
 					if err != nil {
 						log.Error("Error during CTFTime ID conversion", "err", err, "ctf_time_id", ctftimeID)
@@ -73,7 +101,10 @@ func VotePollHandler() bot.EventListener {
 
 					commands.CreateCTF(e.GuildID, e.Client(), ctfTimeIDInt, server)
 				} else {
-					log.Warn("Invalid maxIndex in poll answers")
+					log.Warn("Invalid maxIndex in poll answers",
+						"max_index", maxIndex,
+						"answers_len", len(message.Poll.Answers),
+					)
 				}
 			} else {
 				_, err := e.Client().Rest.CreateMessage(e.ChannelID, discord.MessageCreate{

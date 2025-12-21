@@ -31,8 +31,13 @@ func VoteHandler() handler.CommandHandler {
 		if !ok || duration <= 0 {
 			duration = 48 // default duration 48 hours
 		}
+
 		if e.GuildID() == nil {
 			log.Warn("Create command used outside of a guild", "user_id", e.User().ID)
+			if err := e.DeferCreateMessage(true); err != nil {
+				log.Error("failed to defer create message", "error", err)
+				return err
+			}
 			_, err := e.CreateFollowupMessage(discord.MessageCreate{
 				Content: "This command can only be used inside a guild. ❌",
 				Flags:   discord.MessageFlagEphemeral,
@@ -47,7 +52,16 @@ func VoteHandler() handler.CommandHandler {
 		}
 
 		var ctfsThisWeek []ctftime.Event
+
 		now := time.Now()
+
+		// If it's Saturday or Sunday, look at next week's CTFs instead of this week.
+		// This keeps the selection "flexible" near the weekend.
+		weekday := now.Weekday()
+		if weekday == time.Saturday || weekday == time.Sunday {
+			now = now.AddDate(0, 0, 7)
+		}
+
 		year, week := now.ISOWeek()
 		for _, ctf := range ctfs {
 			startTime, err := time.Parse(time.RFC3339, ctf.Start)
@@ -61,7 +75,13 @@ func VoteHandler() handler.CommandHandler {
 			}
 		}
 
+		log.Info("CTFs found for this week", "count", len(ctfsThisWeek))
+
 		if len(ctfsThisWeek) < 2 || len(ctfsThisWeek) > 10 {
+			if err := e.DeferCreateMessage(true); err != nil {
+				log.Error("failed to defer create message", "error", err)
+				return err
+			}
 			_, err := e.CreateFollowupMessage(discord.MessageCreate{
 				Content: "There must be between 2 and 10 CTFs this week to create a vote. ❌",
 				Flags:   discord.MessageFlagEphemeral,
@@ -74,6 +94,10 @@ func VoteHandler() handler.CommandHandler {
 		err = server.GetByID(db, *e.GuildID())
 		if err != nil {
 			log.Error("failed to fetch server configuration", "error", err)
+			if err := e.DeferCreateMessage(true); err != nil {
+				log.Error("failed to defer create message", "error", err)
+				return err
+			}
 			_, _ = e.CreateFollowupMessage(discord.MessageCreate{
 				Content: "failed to fetch server configuration. ❌",
 				Flags:   discord.MessageFlagEphemeral,
@@ -81,7 +105,7 @@ func VoteHandler() handler.CommandHandler {
 			return err
 		}
 
-		pollTitle := fmt.Sprintf("<@&%s>, Vote the next CTF to participate in! 🎉", server.RoleTeamID)
+		pollTitle := fmt.Sprintf("Vote the next CTF to participate in! 🎉", server.RoleTeamID)
 		log.Info("Creating vote poll", "ctfs_count", len(ctfsThisWeek))
 
 		err = e.CreateMessage(
