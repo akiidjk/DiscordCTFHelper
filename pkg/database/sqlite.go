@@ -26,6 +26,14 @@ func (db *Database) Init() error {
 		log.Fatal("failed to connect database")
 	}
 
+	DB, err := db.connection.DB()
+	if err != nil {
+		log.Fatal("failed to get database instance")
+	}
+
+	DB.SetMaxIdleConns(10)
+	DB.SetMaxOpenConns(100)
+
 	err = db.connection.AutoMigrate(&models.Server{}, &models.CTF{}, &models.Report{}, &models.Creds{})
 	if err != nil {
 		log.Fatal(err)

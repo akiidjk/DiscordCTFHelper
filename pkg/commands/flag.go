@@ -8,6 +8,7 @@ import (
 	"github.com/charmbracelet/log"
 	"github.com/disgoorg/disgo/discord"
 	"github.com/disgoorg/disgo/handler"
+	"github.com/disgoorg/snowflake/v2"
 )
 
 var flag = discord.SlashCommandCreate{
@@ -56,8 +57,23 @@ func FlagHandler() handler.CommandHandler {
 		mate, okMate := options.OptMember("mate")
 		challengeName, okChallenge := options.OptString("challenge_name")
 
+		var channelMessage snowflake.ID = e.Channel().ID()
+
+		activesThreads, err := e.Client().Rest.GetActiveGuildThreads(*e.GuildID())
+
+		for _, thread := range activesThreads.Threads {
+			if e.Channel().ID() == thread.ID() {
+				locked := true
+				channelUpdates := discord.GuildThreadUpdate{
+					Locked: &locked,
+				}
+				e.Client().Rest.UpdateChannel(thread.ID(), channelUpdates)
+				channelMessage = *thread.ParentID()
+			}
+		}
+
 		var ctf models.CTF
-		err := ctf.GetByChannelID(db, e.Channel().ID(), *e.GuildID())
+		err = ctf.GetByChannelID(db, channelMessage, *e.GuildID())
 		if err != nil {
 			log.Error("failed to fetch ctf by channel id", "error", err)
 			return err
@@ -101,7 +117,7 @@ func FlagHandler() handler.CommandHandler {
 
 		content += fmt.Sprintf("🎉\n> `%s`", flag)
 
-		msg, err := client.Rest.CreateMessage(e.Channel().ID(), discord.MessageCreate{
+		msg, err := client.Rest.CreateMessage(channelMessage, discord.MessageCreate{
 			Content: content,
 		})
 		if err != nil {
@@ -109,7 +125,7 @@ func FlagHandler() handler.CommandHandler {
 			return err
 		}
 
-		err = client.Rest.AddReaction(e.Channel().ID(), msg.ID, "🔥")
+		err = client.Rest.AddReaction(channelMessage, msg.ID, "🔥")
 		if err != nil {
 			log.Error("failed to add reaction to flag message", "error", err)
 			return err

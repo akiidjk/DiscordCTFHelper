@@ -37,7 +37,13 @@ func main() {
 		os.Exit(-1)
 	}
 
-	database.Setup()
+	dbInstance := database.Setup()
+	db, err := dbInstance.Connection().DB()
+	if err != nil {
+		log.Error("failed to get database instance", "err", err)
+		os.Exit(-1)
+	}
+	defer db.Close()
 
 	setupLogger(cfg.Log)
 	log.Info("Starting bot-template...", "version", config.Version, "commit", config.Commit)
