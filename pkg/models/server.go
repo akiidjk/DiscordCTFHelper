@@ -46,5 +46,5 @@ func (server *Server) EditCategory(db *gorm.DB, activeCategoryID, archiveCategor
 }
 
 func (server *Server) Delete(db *gorm.DB) error {
-	return db.Delete(&Server{}, Server{ID: server.ID}).Error
+	return db.Unscoped().Delete(&Server{}, server).Error
 }
