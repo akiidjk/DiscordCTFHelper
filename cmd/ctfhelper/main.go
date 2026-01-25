@@ -22,7 +22,7 @@ import (
 func init() {
 	err := dotenv.Load()
 	if err != nil {
-		log.Fatal("Error loading .env file")
+		log.Fatal("error loading .env file", "err", err)
 	}
 }
 
@@ -66,6 +66,7 @@ func main() {
 	h.Command("/init", commands.InitHandler())
 	h.Command("/chall", commands.ChallHandler())
 	h.Command("/vote", commands.VoteHandler())
+	h.Command("/ping", commands.PingHandler())
 
 	if err = b.SetupBot(shouldCleanCommands, h, bot.NewListenerFunc(b.OnReady)); err != nil {
 		log.Error("failed to setup bot", "err", err)
