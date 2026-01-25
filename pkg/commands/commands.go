@@ -15,4 +15,5 @@ var Commands = []discord.ApplicationCommandCreate{
 	cinit,
 	chall,
 	vote,
+	ping,
 }
