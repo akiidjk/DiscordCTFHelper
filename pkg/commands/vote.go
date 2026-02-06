@@ -105,7 +105,7 @@ func VoteHandler() handler.CommandHandler {
 			return err
 		}
 
-		pollTitle := fmt.Sprintf("Vote the next CTF to participate in! 🎉", server.RoleTeamID)
+		pollTitle := fmt.Sprintf("Vote the next CTF to participate in! 🎉")
 		log.Info("Creating vote poll", "ctfs_count", len(ctfsThisWeek))
 
 		err = e.CreateMessage(

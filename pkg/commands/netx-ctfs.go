@@ -101,9 +101,21 @@ func NextCTFsHandler() handler.CommandHandler {
 			case "Mixed":
 				formatEmoji = "🔀"
 			}
+
+			end := fmt.Sprintf("<t:%d:F> (<t:%d:R>)",
+				func() int64 {
+					t, _ := time.Parse(time.RFC3339, ctf.Start)
+					return t.Add(time.Duration(ctf.Duration.Days)*24*time.Hour + time.Duration(ctf.Duration.Hours)*time.Hour).Unix()
+				}(),
+				func() int64 {
+					t, _ := time.Parse(time.RFC3339, ctf.Start)
+					return t.Add(time.Duration(ctf.Duration.Days)*24*time.Hour + time.Duration(ctf.Duration.Hours)*time.Hour).Unix()
+				}(),
+			)
+
 			link := fmt.Sprintf("[CTFtime](%s)", ctf.CtftimeURL)
-			line := fmt.Sprintf("### %d • %s\n🆔 `%d` • ⚖️ **Weight:** `%g` • 📍 **Location:** %s\n📅 **Start:** %s • ⏱️ **Duration:** `%s`\n%s **Format:** %s • 🔗 **Link:** %s\n",
-				idx, ctf.Title, ctf.ID, ctf.Weight, onsite, start, durationStr, formatEmoji, ctf.Format, link)
+			line := fmt.Sprintf("### %d • %s\n🆔 `%d` • ⚖️ **Weight:** `%g` • 📍 **Location:** %s\n📅 **Start:** %s • 🗓️ **End:** %s\n ⏱️ **Duration:** `%s`\n%s **Format:** %s • 🔗 **Link:** %s\n",
+				idx, ctf.Title, ctf.ID, ctf.Weight, onsite, start, end, durationStr, formatEmoji, ctf.Format, link)
 			lines = append(lines, line)
 		}
 
