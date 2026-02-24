@@ -112,3 +112,7 @@ func (_ CTF) GetList(db *gorm.DB, serverID snowflake.ID) ([]CTF, error) {
 	}
 	return ctfs, nil
 }
+
+func (ctf CTF) Update(db *gorm.DB) error {
+	return db.Save(ctf).Error
+}

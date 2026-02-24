@@ -64,8 +64,9 @@ func CreateCTF(guildId *snowflake.ID, client *bot.Client, ctfTimeId int, server 
 	title := fmt.Sprintf("%s - %d", data.Title, startTime.Year())
 
 	ctf := models.CTF{
-		Name:     title,
-		ServerID: *guildId,
+		Name:      title,
+		ServerID:  *guildId,
+		CTFTimeID: int64(ctfTimeId),
 	}
 	present, err := ctf.IsPresent(db)
 	if err != nil {
@@ -75,6 +76,13 @@ func CreateCTF(guildId *snowflake.ID, client *bot.Client, ctfTimeId int, server 
 	if present {
 		return errors.New("the CTF is already present in the discord server. ❌")
 	}
+
+	// Save the CTF record early so progress is not lost
+	if err := ctf.Add(db); err != nil {
+		log.Error("failed to add CTF to database", "error", err)
+		return err
+	}
+	log.Info("CTF record created in database", "title", title)
 
 	log.Info("Creating role and channel for CTF", "title", title)
 	role, err := discordutils.CreateRole(
@@ -91,6 +99,12 @@ func CreateCTF(guildId *snowflake.ID, client *bot.Client, ctfTimeId int, server 
 	}
 
 	log.Debug("Created role for CTF", "role_id", role.ID)
+	ctf.RoleID = role.ID
+	if err := ctf.Update(db); err != nil {
+		log.Error("failed to update CTF with role ID", "error", err)
+		return err
+	}
+
 	log.Debug("Creating channel for CTF", "title", title)
 	channelCTF, err := discordutils.CreateChannel(
 		client,
@@ -109,6 +123,12 @@ func CreateCTF(guildId *snowflake.ID, client *bot.Client, ctfTimeId int, server 
 	}
 
 	log.Debug("Created channel for CTF", "channel_id", (*channelCTF).ID())
+	ctf.TextChannelID = (*channelCTF).ID()
+	if err := ctf.Update(db); err != nil {
+		log.Error("failed to update CTF with channel ID", "error", err)
+		return err
+	}
+
 	log.Info("Sending welcome message and pinning link", "channel_id", (*channelCTF).ID())
 	welcomeContent := fmt.Sprintf("%s Welcome to the CTF **%s**! 🎉", role.Mention(), title)
 	if _, err := client.Rest.CreateMessage((*channelCTF).ID(), discord.MessageCreate{
@@ -156,9 +176,21 @@ func CreateCTF(guildId *snowflake.ID, client *bot.Client, ctfTimeId int, server 
 		return errors.New("failed to create embed message")
 	}
 
+	ctf.MsgID = embedMsg.ID
+	if err := ctf.Update(db); err != nil {
+		log.Error("failed to update CTF with embed message ID", "error", err)
+		return err
+	}
+
 	var description string
 	if len(data.Description) >= MaxDescLenght {
 		description = data.Description[:MaxDescLenght] + "..."
+	}
+
+	ctf.Description = description
+	if err := ctf.Update(db); err != nil {
+		log.Error("failed to update CTF with description", "error", err)
+		return err
 	}
 
 	log.Info("Creating scheduled event for CTF", "title", title)
@@ -178,22 +210,13 @@ func CreateCTF(guildId *snowflake.ID, client *bot.Client, ctfTimeId int, server 
 		return errors.New("failed to create scheduled event")
 	}
 
-	ctf = models.CTF{
-		ServerID:      *guildId,
-		Name:          title,
-		Description:   description,
-		TextChannelID: (*channelCTF).ID(),
-		EventID:       events.ID,
-		RoleID:        role.ID,
-		MsgID:         embedMsg.ID,
-		CTFTimeID:     int64(ctfTimeId),
-	}
-
-	if err := ctf.Add(db); err != nil {
-		log.Error("failed to add CTF to database", "error", err)
+	ctf.EventID = events.ID
+	if err := ctf.Update(db); err != nil {
+		log.Error("failed to update CTF with event ID", "error", err)
 		return err
 	}
 
+	log.Info("CTF fully created and saved", "title", title)
 	return nil
 }
 
