@@ -65,7 +65,7 @@ func NextCTFsHandler() handler.CommandHandler {
 			return err
 		}
 
-		ctfs, err := ctftime.GetCTFs()
+		ctfs, err := ctftime.GetCTFs(limit)
 		if err != nil {
 			_, err = e.CreateFollowupMessage(discord.MessageCreate{
 				Content: "failed to get CTFs.",

@@ -117,8 +117,8 @@ func GetCTFInfo(ctftimeID int) (Event, error) {
 	return parsedJSON, nil
 }
 
-func GetCTFs() ([]Event, error) {
-	url := BaseURL + "/events/"
+func GetCTFs(limit int) ([]Event, error) {
+	url := BaseURL + "/events/" + "?limit=" + strconv.Itoa(limit)
 	log.Debug("Fetching CTFs from URL:", "url", url)
 	client := &http.Client{}
 	req, err := createRequest(url)
