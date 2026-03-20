@@ -122,7 +122,7 @@ func VoteHandler() handler.CommandHandler {
 
 						for _, ctf := range ctfsThisWeek {
 							log.Debug("Adding CTF to poll options", "ctf", ctf.Title)
-							text := ctf.Title + fmt.Sprintf(" (%d)", ctf.CtfID)
+							text := ctf.Title + fmt.Sprintf(" (%d)", ctf.ID)
 							options = append(options, discord.PollMedia{
 								Text: &text,
 							})
