@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"models"
+	"slices"
 	"time"
 
 	"github.com/charmbracelet/log"
@@ -59,12 +60,7 @@ func CheckPermission(e *handler.CommandEvent) error {
 
 	hasRole := false
 	if member != nil && roleManager != nil {
-		for _, roleID := range member.RoleIDs {
-			if roleID == roleManager.ID {
-				hasRole = true
-				break
-			}
-		}
+		hasRole = slices.Contains(member.RoleIDs, roleManager.ID)
 	}
 
 	if member == nil || roleManager == nil || !hasRole {

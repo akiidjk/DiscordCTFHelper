@@ -8,7 +8,6 @@ import (
 	"github.com/charmbracelet/log"
 	"github.com/disgoorg/disgo/discord"
 	"github.com/disgoorg/disgo/handler"
-	"github.com/disgoorg/snowflake/v2"
 )
 
 var flag = discord.SlashCommandCreate{
@@ -57,9 +56,9 @@ func FlagHandler() handler.CommandHandler {
 		mate, okMate := options.OptMember("mate")
 		challengeName, okChallenge := options.OptString("challenge_name")
 
-		var channelMessage snowflake.ID = e.Channel().ID()
+		channelMessage := e.Channel().ID()
 
-		activesThreads, err := e.Client().Rest.GetActiveGuildThreads(*e.GuildID())
+		activesThreads, _ := e.Client().Rest.GetActiveGuildThreads(*e.GuildID())
 
 		for _, thread := range activesThreads.Threads {
 			if e.Channel().ID() == thread.ID() {
@@ -73,7 +72,7 @@ func FlagHandler() handler.CommandHandler {
 		}
 
 		var ctf models.CTF
-		err = ctf.GetByChannelID(db, channelMessage, *e.GuildID())
+		err := ctf.GetByChannelID(db, channelMessage, *e.GuildID())
 		if err != nil {
 			log.Error("failed to fetch ctf by channel id", "error", err)
 			return err

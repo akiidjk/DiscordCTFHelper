@@ -70,7 +70,7 @@ func main() {
 
 	if err = b.SetupBot(shouldCleanCommands, h, bot.NewListenerFunc(b.OnReady)); err != nil {
 		log.Error("failed to setup bot", "err", err)
-		os.Exit(-1)
+		return
 	}
 
 	defer func() {

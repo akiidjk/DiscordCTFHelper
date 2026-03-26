@@ -11,10 +11,12 @@ run: build
 	@./bin/ctfhelper $(ARGS)
 
 lint:
-	@if ! golangci-lint run; then exit 1; fi
+	@go work sync
+	@go list -f {{.Dir}} -m | xargs golangci-lint run --fix
 
 fmt:
-	@if command -v gofumpt > /dev/null; then gofumpt -w -d .; else go list -f {{.Dir}} ./... | xargs gofmt -w -s -d; fi
+	@go work sync
+	@go list -f {{.Dir}} -m | xargs gofumpt -w -d
 
 help:
 	@echo "Available targets:"

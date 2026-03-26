@@ -1,11 +1,11 @@
 version: "2"
 
 run:
-  go: "1.25.5"
+  go: "1.26.0"
 
   timeout: 5m
-  # Explicitly set the modules to lint to avoid "directory prefix . does not contain modules listed in go.work" error.
-  modules-download-mode: readonly
+  allow-parallel-runners: true
+  relative-path-mode: gomod
 
 issues:
   # Maximum issues count per one linter. Set to 0 to disable. Default is 50.
@@ -16,7 +16,7 @@ issues:
 
 formatters:
   enable:
-    - gofumpt # Detects whether code was gofumpt-ed.
+    - gofmt # Detects whether code was gofumpt-ed.
     - goimports
 
   exclusions:
@@ -26,8 +26,8 @@ linters:
   enable:
     - bodyclose
     - copyloopvar # Detects places where loop variables are copied.
-    - depguard
     - dogsled
+    - dupl
     - dupword # Detects duplicate words.
     - durationcheck
     - errcheck
@@ -56,17 +56,13 @@ linters:
     - usestdlibvars
     - usetesting # Reports uses of functions with replacement inside the testing package.
     - wastedassign
-
+    - modernize # Detects code that can be modernized to use newer Go features.
+    - zerologlint
+    - whitespace # Detects unnecessary whitespace.
   disable:
     - errcheck
 
   settings:
-    forbidigo:
-      forbid:
-        - pkg: ^regexp$
-          pattern: ^regexp\.MustCompile
-          msg: Use internal/lazyregexp.New instead.
-
     gocyclo:
       min-complexity: 16
 

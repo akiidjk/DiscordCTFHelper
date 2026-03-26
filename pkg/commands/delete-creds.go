@@ -2,8 +2,8 @@ package commands
 
 import (
 	"database"
-	"discordutils"
 	"models"
+	"slices"
 
 	"github.com/charmbracelet/log"
 	"github.com/disgoorg/disgo/discord"
@@ -32,10 +32,6 @@ func DeleteCredsHandler() handler.CommandHandler {
 			return err
 		}
 
-		if err := discordutils.CheckPermission(e); err != nil {
-			return err
-		}
-
 		// Find the CTF associated with the current channel
 		var ctf models.CTF
 		err := ctf.GetByChannelID(db, e.Channel().ID(), *e.GuildID())
@@ -54,6 +50,19 @@ func DeleteCredsHandler() handler.CommandHandler {
 		if ctf == (models.CTF{}) {
 			_, err := e.CreateFollowupMessage(discord.MessageCreate{
 				Content: "No CTFs are currently active in this channel. ❌",
+				Flags:   discord.MessageFlagEphemeral,
+			})
+			return err
+		}
+
+		if !slices.Contains(e.Member().RoleIDs, ctf.RoleID) {
+			if err := e.DeferCreateMessage(true); err != nil {
+				log.Error("failed to defer create message", "error", err)
+				return err
+			}
+
+			_, err := e.CreateFollowupMessage(discord.MessageCreate{
+				Content: "You don't have the required role to view or set credentials. ❌",
 				Flags:   discord.MessageFlagEphemeral,
 			})
 			return err
