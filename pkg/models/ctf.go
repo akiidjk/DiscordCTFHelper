@@ -104,7 +104,7 @@ func (ctf *CTF) IsPresent(db *gorm.DB) (bool, error) {
 }
 
 // GetList retrieves a list of all CTFs for a specific server.
-func (_ CTF) GetList(db *gorm.DB, serverID snowflake.ID) ([]CTF, error) {
+func (CTF) GetList(db *gorm.DB, serverID snowflake.ID) ([]CTF, error) {
 	var ctfs []CTF
 	err := db.Where(CTF{ServerID: serverID}).Find(&ctfs).Error
 	if err != nil {

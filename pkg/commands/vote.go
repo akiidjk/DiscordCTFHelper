@@ -118,7 +118,7 @@ func VoteHandler() handler.CommandHandler {
 						Text: &pollTitle,
 					},
 					Answers: func() []discord.PollMedia {
-						var options []discord.PollMedia
+						options := make([]discord.PollMedia, 0, len(ctfsThisWeek))
 
 						for _, ctf := range ctfsThisWeek {
 							log.Debug("Adding CTF to poll options", "ctf", ctf.Title)

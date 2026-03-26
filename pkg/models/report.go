@@ -58,6 +58,6 @@ func (report *Report) Update(db *gorm.DB) error {
 }
 
 // Delete deletes a report from the database by CTFID.
-func (_ *Report) Delete(db *gorm.DB, ctfID int64) error {
+func (*Report) Delete(db *gorm.DB, ctfID int64) error {
 	return db.Delete(&Report{}, Report{CTFID: ctfID}).Error
 }

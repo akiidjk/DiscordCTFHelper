@@ -258,7 +258,7 @@ func CreateHandler() handler.CommandHandler {
 				Content: err.Error(),
 				Flags:   discord.MessageFlagEphemeral,
 			})
-			return nil
+			return err
 		}
 
 		// Fetch the created CTF to confirm and announce
