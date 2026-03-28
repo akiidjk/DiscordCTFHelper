@@ -4,7 +4,6 @@ go 1.25.5
 
 require (
 	github.com/charmbracelet/log v0.4.2
-	github.com/disgoorg/snowflake/v2 v2.0.3
 	gorm.io/driver/sqlite v1.6.0
 	gorm.io/gorm v1.31.1
 )
