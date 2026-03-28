@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log/slog"
 	"models"
+	"slices"
 	"time"
 
 	"github.com/charmbracelet/log"
@@ -50,10 +51,6 @@ func CredsHandler() handler.CommandHandler {
 			return err
 		}
 
-		if err := discordutils.CheckPermission(e); err != nil {
-			return err
-		}
-
 		var ctf models.CTF
 		err = ctf.GetByChannelID(db, e.Channel().ID(), *e.GuildID())
 		if err != nil {
@@ -69,6 +66,19 @@ func CredsHandler() handler.CommandHandler {
 
 			_, err := e.CreateFollowupMessage(discord.MessageCreate{
 				Content: "No CTF is associated with this channel. ❌",
+				Flags:   discord.MessageFlagEphemeral,
+			})
+			return err
+		}
+
+		if !slices.Contains(e.Member().RoleIDs, ctf.RoleID) {
+			if err := e.DeferCreateMessage(true); err != nil {
+				log.Error("failed to defer create message", "error", err)
+				return err
+			}
+
+			_, err := e.CreateFollowupMessage(discord.MessageCreate{
+				Content: "You don't have the required role to view or set credentials. ❌",
 				Flags:   discord.MessageFlagEphemeral,
 			})
 			return err

@@ -60,18 +60,18 @@ func (b *Bot) SetupBot(shouldCleanCommands *bool, listeners ...bot.EventListener
 		return err
 	}
 
-	if *shouldCleanCommands {
-		// var id snowflake.ID = 1261228203251339374
-		// if err := b.resetAllCommands(&id); err != nil {
-		// 	log.Error("failed to reset commands", "err", err)
-		// }
-	}
+	// if *shouldCleanCommands {
+	// var id snowflake.ID = 1261228203251339374
+	// if err := b.resetAllCommands(&id); err != nil {
+	// 	log.Error("failed to reset commands", "err", err)
+	// }
+	// }
 
 	b.Client = *client
 	return nil
 }
 
-func changePresenceStatus(ctx context.Context, client bot.Client) error {
+func changePresenceStatus(_ context.Context, client bot.Client) error {
 	ticker := time.NewTicker(10 * time.Minute)
 	defer ticker.Stop()
 	for range ticker.C {
