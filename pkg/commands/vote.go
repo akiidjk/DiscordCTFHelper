@@ -63,6 +63,7 @@ func VoteHandler() handler.CommandHandler {
 		}
 
 		year, week := now.ISOWeek()
+		firstStart := time.Now().Add(time.Duration(duration) * time.Hour)
 		for _, ctf := range ctfs {
 			startTime, err := time.Parse(time.RFC3339, ctf.Start)
 			if err != nil {
@@ -72,8 +73,16 @@ func VoteHandler() handler.CommandHandler {
 			y, w := startTime.ISOWeek()
 			if y == year && w == week {
 				ctfsThisWeek = append(ctfsThisWeek, ctf)
+
+				t1, _ := time.Parse(time.RFC3339, ctf.Start)
+				if t1.Before(firstStart) {
+					firstStart = t1
+				}
 			}
 		}
+
+		hoursToRemove := int((time.Now().Add(time.Duration(duration) * time.Hour).Sub(firstStart)).Hours())
+		duration = duration - hoursToRemove
 
 		log.Info("CTFs found for this week", "count", len(ctfsThisWeek))
 
