@@ -69,15 +69,14 @@ func VotePollHandler() bot.EventListener {
 			}
 
 			var winningIndices []int
-			for i, ans := range message.Poll.Results.AnswerCounts {
+			for _, ans := range message.Poll.Results.AnswerCounts {
 				if ans.Count == maxVotes {
-					winningIndices = append(winningIndices, i)
+					winningIndices = append(winningIndices, ans.ID-1)
 				}
 			}
 
 			if len(winningIndices) == 1 {
 				maxIndex := winningIndices[0]
-
 				if maxIndex >= 0 && maxIndex < len(message.Poll.Answers) {
 					bestAnswer := *message.Poll.Answers[maxIndex].PollMedia.Text
 					log.Info("Most voted answer found", "answer", bestAnswer, "votes", maxVotes)
