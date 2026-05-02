@@ -195,8 +195,8 @@ func CreateCTF(guildId *snowflake.ID, client *bot.Client, ctfTimeId int, server 
 
 	log.Info("Creating scheduled event for CTF", "title", title)
 	// Ensure start time is after current time to avoid Discord API errors
-	var fixStartTime time.Time
-	if startTime.Before(time.Now().Add(time.Minute)) {
+	fixStartTime := startTime
+	if fixStartTime.Before(time.Now().Add(time.Minute)) {
 		fixStartTime = time.Now().Add(time.Minute * 1)
 	}
 
