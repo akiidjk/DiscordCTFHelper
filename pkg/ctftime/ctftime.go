@@ -117,7 +117,7 @@ func GetCTFInfo(ctftimeID int) (Event, error) {
 	return parsedJSON, nil
 }
 
-func GetCTFs(limit int) ([]Event, error) {
+func GetCTFs(limit int, onsite bool) ([]Event, error) {
 	url := BaseURL + "/events/" + "?limit=" + strconv.Itoa(limit)
 	log.Debug("Fetching CTFs from URL:", "url", url)
 	client := &http.Client{}
@@ -154,6 +154,15 @@ func GetCTFs(limit int) ([]Event, error) {
 		log.Error("Non-200 status code received for CTFs", "status_code", resp.StatusCode)
 	}
 
+	if !onsite {
+		for i := 0; i < len(parsedJSON); i++ {
+			if parsedJSON[i].Onsite {
+				log.Debug("Skipping non-onsite CTF", "ctf_id", parsedJSON[i].ID, "title", parsedJSON[i].Title)
+				parsedJSON = append(parsedJSON[:i], parsedJSON[i+1:]...)
+				i--
+			}
+		}
+	}
 	log.Debug("Returning parsed CTFs", "count", len(parsedJSON))
 	return parsedJSON, nil
 }

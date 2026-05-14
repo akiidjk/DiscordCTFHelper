@@ -21,6 +21,11 @@ var vote = discord.SlashCommandCreate{
 			Description: "Duration of the vote in hours (default 48h)",
 			Required:    false,
 		},
+		discord.ApplicationCommandOptionBool{
+			Name:        "onsite",
+			Description: "Set to true to include also onsite CTFs (default false)",
+			Required:    false,
+		},
 	},
 }
 
@@ -31,6 +36,8 @@ func VoteHandler() handler.CommandHandler {
 		if !ok || duration <= 0 {
 			duration = 48 // default duration 48 hours
 		}
+
+		onsite, _ := options.OptBool("onsite")
 
 		if e.GuildID() == nil {
 			log.Warn("Create command used outside of a guild", "user_id", e.User().ID)
@@ -45,7 +52,8 @@ func VoteHandler() handler.CommandHandler {
 			return err
 		}
 
-		ctfs, err := ctftime.GetCTFs(5)
+		log.Info("Fetching CTFs from ctftime", "onsite", onsite)
+		ctfs, err := ctftime.GetCTFs(10, onsite)
 		if err != nil {
 			log.Error("failed to get CTFs", "error", err)
 			return err
