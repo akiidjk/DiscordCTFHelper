@@ -16,4 +16,7 @@ var Commands = []discord.ApplicationCommandCreate{
 	chall,
 	vote,
 	ping,
+	help,
+	guide,
+	rules,
 }

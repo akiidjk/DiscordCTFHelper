@@ -10,8 +10,8 @@ import (
 )
 
 var (
-	Version = "dev"
-	Commit  = "2.0.0"
+	Version = "main"
+	Commit  = "2.2.0"
 )
 
 func LoadConfig() (*Config, error) {
