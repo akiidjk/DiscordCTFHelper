@@ -45,7 +45,7 @@ func VoteHandler() handler.CommandHandler {
 			return err
 		}
 
-		ctfs, err := ctftime.GetCTFs(5)
+		ctfs, err := ctftime.GetCTFs(10)
 		if err != nil {
 			log.Error("failed to get CTFs", "error", err)
 			return err
