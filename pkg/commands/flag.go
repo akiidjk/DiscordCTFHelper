@@ -108,7 +108,7 @@ func FlagHandler() handler.CommandHandler {
 
 		content := fmt.Sprintf("<@&%s> NEW FLAG FOUND BY %s", ctf.RoleID, e.User().Mention())
 		if okMate {
-			content += "and " + mate.User.Mention()
+			content += " and " + mate.User.Mention()
 		}
 		if okChallenge {
 			content += " for challenge: " + challengeName

@@ -21,6 +21,11 @@ var vote = discord.SlashCommandCreate{
 			Description: "Duration of the vote in hours (default 48h)",
 			Required:    false,
 		},
+		discord.ApplicationCommandOptionBool{
+			Name:        "onsite",
+			Description: "Set to true to include also onsite CTFs (default false)",
+			Required:    false,
+		},
 	},
 }
 
@@ -28,9 +33,8 @@ func VoteHandler() handler.CommandHandler {
 	return func(e *handler.CommandEvent) error {
 		options := e.SlashCommandInteractionData()
 		duration, ok := options.OptInt("duration")
-		if !ok || duration <= 0 {
-			duration = 48 // default duration 48 hours
-		}
+
+		onsite, _ := options.OptBool("onsite")
 
 		if e.GuildID() == nil {
 			log.Warn("Create command used outside of a guild", "user_id", e.User().ID)
@@ -45,7 +49,9 @@ func VoteHandler() handler.CommandHandler {
 			return err
 		}
 
-		ctfs, err := ctftime.GetCTFs(10)
+
+		log.Info("Fetching CTFs from ctftime", "onsite", onsite)
+		ctfs, err := ctftime.GetCTFs(10, onsite)
 		if err != nil {
 			log.Error("failed to get CTFs", "error", err)
 			return err
@@ -116,6 +122,13 @@ func VoteHandler() handler.CommandHandler {
 
 		pollTitle := "Vote the next CTF to participate in! 🎉"
 		log.Info("Creating vote poll", "ctfs_count", len(ctfsThisWeek))
+
+		if !ok || duration <= 0 {
+			duration = int(time.Until(firstStart).Hours()) - 12
+			if duration < 1 {
+				duration = max(1, int(time.Until(firstStart).Hours())/2)
+			}
+		}
 
 		err = e.CreateMessage(
 			discord.MessageCreate{
